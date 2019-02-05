@@ -1,21 +1,21 @@
 import tensorflow as tf
-#from tensorflow import keras
-#tf.enable_eager_execution()
-#print(tf.executing_eagerly)
+# from tensorflow import keras
+# tf.enable_eager_execution()
+# print(tf.executing_eagerly)
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.optimize import curve_fit
+
+# import pandas as pd
+# from scipy.optimize import curve_fit
 
 print(tf.__version__)
 
 
-
-def input_functor(datanorm,labelsnorm,batch_size):
+def input_functor(datanorm, labelsnorm, batch_size):
     long = int(datanorm.shape[0])
-    #long = int(datanorm.shape[0])
-    dataset = tf.data.Dataset.from_tensor_slices((datanorm,labelsnorm))
+    # long = int(datanorm.shape[0])
+    dataset = tf.data.Dataset.from_tensor_slices((datanorm, labelsnorm))
     dataset = dataset.shuffle(long).repeat().batch(batch_size)
     return dataset.make_one_shot_iterator().get_next()
     return dataset
@@ -71,5 +71,3 @@ def CNNmodel(features, labels, mode, params):
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
-
-
