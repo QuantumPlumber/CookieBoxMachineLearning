@@ -113,7 +113,8 @@ def slicer(bot, top, spectra_shape, spectra_reshape, enum_theta, detector_thetas
         (top - bot) * spectra_shape[1], 16, spectra_shape[3]))
 
 
-def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single_pulse.hdf5', transfer='reformed.hdf5'):
+def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single_pulse.hdf5',
+                        transfer='reformed_spectra.hdf5'):
     '''
     Transforms the raw simulation data into detector data of a given precision
 
@@ -141,7 +142,7 @@ def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single_pulse
         raise Exception('No "VN_coeff" in file.')
 
     num_ebins = 100
-    energy_range = 100  # 100 eV was used in the code
+    energy_range = 100.  # 100 eV was used in the code
     energy_points = np.linspace(0, energy_range, num_ebins)
 
     spectra_shape = np.array(Spectra.shape)
@@ -168,7 +169,7 @@ def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single_pulse
         hits_ref = h5_reformed['Hits']
     hits_ref = np.reshape(Hits, hits_reshape)
 
-    num_spectra = np.arange(0, spectra_shape[0], step=10)
+    num_spectra = np.arange(0, spectra_shape[0], step=3)
     num_spectra_top = np.append(num_spectra, np.array(spectra_shape[0]) - 1)[1:]
     bot_top = np.column_stack((num_spectra, num_spectra_top)).astype('int')
 
@@ -178,33 +179,30 @@ def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single_pulse
 
     # Encapsulate memory heavy things in the slicer function so python is forced to free memory
     for bot, top in bot_top[...]:
+        checkpoint = time.process_time()
         # Create 16 detector lists, discards angle information.
         slice_2_spectra(bot, top, spectra_shape, spectra_reshape, vn_reshape, energy_points, enum_theta,
                         detector_thetas, Spectra, VN_coeff, vn_co_ref, detectors_ref)
-        print('complete {} to {} of {}'.format(bot, top, spectra_reshape[0]))
+        print('complete {} to {} of {}'.format(bot, top, spectra_shape[0]))
+        delta_t = checkpoint - time.process_time()
+        print('Converted in {}'.format(delta_t))
     h5file.close()
     h5_reformed.close()
 
 
 def slice_2_spectra(bot, top, spectra_shape, spectra_reshape, vn_reshape, energy_points, enum_theta, detector_thetas,
                     Spectra, VN_coeff, vn_co_ref, detectors_ref):
-
-    detector = np.zeros((top - bot, spectra_shape[1], 16, spectra_shape[3]))
-
     # Compute the kernel density estimate over the energy_points of the waveform.
-    cut_shape = (top - bot, spectra_shape[1], 1, spectra_shape[3])
+    cut_shape = (top - bot, spectra_shape[1], spectra_shape[3])
     waveforms = gaussian_kernel_compute(cut_shape, bot, top, energy_points, Spectra)
 
-    for loc, angle in enumerate(detector_thetas.tolist()):
-        angle_index = np.multiply.outer(np.abs(Spectra[bot:top, :, 0, :] - angle) < np.abs(
-            detector_thetas[0] - detector_thetas[1]) / 2., np.ones_like(energy_points)).astype('bool')
-
-        (detector[:, :, loc, :]) = np.sum((Spectra[bot:top, :, 1, :, :])[angle_index], axis=3)
+    detector = slice_waveform(bot, top, spectra_shape, spectra_reshape, energy_points, detector_thetas, Spectra,
+                              waveforms)
 
     coeff = np.repeat(VN_coeff[bot:top], repeats=spectra_shape[1], axis=0)
     cut_bot = bot * spectra_shape[1]
     cut_top = top * spectra_shape[1]
-    vn_co_ref[cut_bot:cut_top] = np.reshape(coeff, newshape=(cut_top - cut_bot, vn_reshape[0]))
+    vn_co_ref[cut_bot:cut_top] = np.reshape(coeff, newshape=(cut_top - cut_bot, vn_reshape[1]))
     detectors_ref[cut_bot:cut_top, :, :] = np.reshape(detector, newshape=(
         cut_top - cut_bot, spectra_reshape[1], spectra_reshape[2]))
 
@@ -212,13 +210,36 @@ def slice_2_spectra(bot, top, spectra_shape, spectra_reshape, vn_reshape, energy
 def gaussian_kernel_compute(cut_shape, bot, top, energy_points, Spectra):
     # Convenience function to ensure destruction of intermediate large arrays.
 
-    energy_points_array = np.multiply.outer(np.ones_like(cut_shape), energy_points)
-    gaussian_centers = np.multiply.outer(Spectra[bot:top, :, 1, :], np.ones_like(energy_points))
+    #  use the old trick of setting all zero values to some outrageous number.
+    #  No compute penalty as we already compute full array.
+    #  Solves problem of zero padding at end of ragged arrays.
+    energy_points_array = np.multiply.outer(np.ones(cut_shape), energy_points)
+    spectra_rem = Spectra[bot:top, :, 1, :]
+    spectra_rem[spectra_rem == 0.0] = 1000
+    gaussian_centers = np.multiply.outer(spectra_rem, np.ones_like(energy_points))
 
     waveforms = np.exp(
-        (energy_points_array - gaussian_centers) ** 2 / (2 * .25 / 2.355))  # waveforms must be summed over cookie
+        -(energy_points_array - gaussian_centers) ** 2 / (2 * .25 / 2.355))  # waveforms must be summed over cookie
 
+    # print(waveforms)
     return waveforms
+
+
+def slice_waveform(bot, top, spectra_shape, spectra_reshape, energy_points, detector_thetas, Spectra, waveforms):
+    #  another convenience function to encapsulate the largest arrays.
+
+    detector = np.zeros((top - bot, spectra_shape[1], 16, spectra_shape[3], energy_points.shape[0]))
+    # print(bot, top)
+    # print(detector.shape)
+    # print(detector.nbytes)
+    for loc, angle in enumerate(detector_thetas.tolist()):
+        # contracts along the third axis to form
+        angle_index = np.multiply.outer(np.abs(Spectra[bot:top, :, 0, :] - angle) < np.abs(
+            detector_thetas[0] - detector_thetas[1]) / 2., np.ones_like(energy_points)).astype('bool')
+        # print(angle_index)
+        # angle information is encoded in the fourth, energy waveform in the 5th.
+        (detector[:, :, loc, :, :])[angle_index] = waveforms[angle_index]
+    return np.sum(detector, axis=3)
 
 
 def transform_shuffle(filename='../AttoStreakSimulations/TF_train_single_pulse.hdf5', transfer='reformed.hdf5'):
