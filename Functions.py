@@ -21,6 +21,34 @@ def input_functor(datanorm, labelsnorm, batch_size):
     return dataset
 
 
+def input_hdf5_functor(data, labels, batch_size):
+    data_shape = data.shape
+    labels_shape = labels.shape
+    data.sort() # limit 300 entries max per cookie.
+    labels = np.reshape(labels, (labels_shape[0], labels_shape[1] * labels_shape[2]))
+
+    dataset = tf.data.Dataset.from_tensor_slices((data[:, :, -300:-1], labels))
+    dataset = dataset.shuffle(data_shape[0]).repeat().batch(batch_size)
+    return dataset.make_one_shot_iterator().get_next()
+    return dataset
+
+def input_hdf5_functor_map(data, labels, batch_size):
+    data_shape = data.shape
+    labels_shape = labels.shape
+    data.sort() # limit 300 entries max per cookie.
+    labels = np.reshape(labels, (labels_shape[0], labels_shape[1] * labels_shape[2]))
+
+    dataset = tf.data.Dataset.from_tensor_slices((data[:, :, -300:-1], labels))
+    dataset = dataset.shuffle(data_shape[0]).repeat().batch(batch_size)
+    return dataset.make_one_shot_iterator().get_next()
+    return dataset
+
+def map_function_hdf5():
+
+    energies = tf.linspace(start=0, stop=100, num=100)
+    #  this is done so much easier in numpy..
+
+
 def CNNmodel(features, labels, mode, params):
     ############### Define the Graph Structure
 
@@ -29,7 +57,12 @@ def CNNmodel(features, labels, mode, params):
 
     # net = tf.reshape(features["sequences"], [-1, 32, 5])
 
-    net = features;
+    feat_shape = features.shape
+
+    for cookie in range(params['num_cookies']):
+        net = tf.layers.dense(inputs=features[:, cookie, :], units=params['num_inputs'][0], activation=tf.nn.relu)
+        net = tf.layers.dense(inputs=net, units=params['num_inputs'][1], activation=tf.nn.relu)
+        net = tf.layers.dense(inputs=net, units=params['num_inputs'][2], activation=tf.nn.relu)
 
     for filters, window in params['CNN']:
         net = tf.layers.conv1d(inputs=net, filters=filters, kernel_size=window, activation=tf.nn.relu)
