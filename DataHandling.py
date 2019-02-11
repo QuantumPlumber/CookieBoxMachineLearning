@@ -202,7 +202,7 @@ def slice_2_spectra(bot, top, spectra_shape, spectra_reshape, vn_reshape, energy
     coeff = np.repeat(VN_coeff[bot:top], repeats=spectra_shape[1], axis=0)
     cut_bot = bot * spectra_shape[1]
     cut_top = top * spectra_shape[1]
-    vn_co_ref[cut_bot:cut_top] = np.reshape(coeff, newshape=(cut_top - cut_bot, vn_reshape[1]))
+    vn_co_ref[cut_bot:cut_top, :] = np.reshape(coeff, newshape=(cut_top - cut_bot, vn_reshape[1]))
     detectors_ref[cut_bot:cut_top, :, :] = np.reshape(detector, newshape=(
         cut_top - cut_bot, spectra_reshape[1], spectra_reshape[2]))
 

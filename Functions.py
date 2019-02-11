@@ -48,6 +48,34 @@ def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=1000, batc
     return dataset.make_one_shot_iterator().get_next()
     # return dataset
 
+def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', batch_size=1):
+    h5_reformed = h5py.File(transfer, 'r')
+    global ground_truth
+
+
+    if 'Spectra16' not in h5_reformed:
+        raise Exception('No "Spectra16" in file.')
+    else:
+        Spectra16 = h5_reformed['Spectra16']
+
+    if 'VN_coeff' not in h5_reformed:
+        raise Exception('No "VN_coeff" in file.')
+    else:
+        VN_coeff = h5_reformed['VN_coeff']
+
+    Spectra16_select = Spectra16[3000:3002, ...]
+
+    VN_coeff_select = VN_coeff[3000:3002, ...]
+    ground_truth = np.copy(VN_coeff_select)
+    # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
+
+    dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select))
+    dataset = dataset.batch(batch_size)
+
+    h5_reformed.close()
+    return dataset.make_one_shot_iterator().get_next()
+    # return dataset
+
 
 def input_hdf5_functor_map(data, labels, batch_size):
     data_shape = data.shape
@@ -67,14 +95,6 @@ def map_function_hdf5():
 
 
 def CNNmodel(features, labels, mode, params):
-    ############### Define the Graph Structure
-
-    ### It looks like feature columns are not only uncescessary but breaking the CNN
-    ##net = tf.feature_column.input_layer(features, params['feature_columns'])
-
-    # net = tf.reshape(features["sequences"], [-1, 32, 5])
-
-    feat_shape = features.shape
 
     cookie_list = []
     for cookie in range(params['NUM_COOKIES']):
@@ -87,22 +107,13 @@ def CNNmodel(features, labels, mode, params):
         cookie_list.append(net)
 
     cookie_box = tf.concat(values=cookie_list, axis=1)
-    print(cookie_box.shape)
     for nodes in params['DENSE']:
         net = tf.layers.dense(inputs=cookie_box, units=nodes, activation=tf.nn.relu)
 
     net = tf.layers.dense(inputs=net, units=params['OUT'], activation=tf.nn.relu)
-    print(net.shape)
 
     net = tf.layers.flatten(net)
     output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
-
-    ################# Compute loss and metrics
-    loss = tf.losses.absolute_difference(labels=labels, predictions=output)
-
-    accuracy = tf.metrics.mean_absolute_error(labels=labels,
-                                              predictions=output,
-                                              name='acc_op')
 
     ############### Prediction mode.
     # predicted_classes = tf.argmax(logits, 1)
@@ -116,12 +127,16 @@ def CNNmodel(features, labels, mode, params):
 
         return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
+    loss = tf.losses.mean_squared_error(labels=labels, predictions=output)
+    accuracy = tf.metrics.mean_squared_error(labels=labels, predictions=output, name='acc_op')
+
     ######## Evaluation mode
     if mode == tf.estimator.ModeKeys.EVAL:
         return tf.estimator.EstimatorSpec(
             mode, loss=loss, eval_metric_ops=metrics)
 
     ######## Train mode
+
     optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
