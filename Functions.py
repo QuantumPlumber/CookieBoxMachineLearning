@@ -62,9 +62,9 @@ def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', batch_size=1):
     else:
         VN_coeff = h5_reformed['VN_coeff']
 
-    Spectra16_select = Spectra16[3000:3002, ...]
+    Spectra16_select = Spectra16[13000:13002, ...]
 
-    VN_coeff_select = VN_coeff[3000:3002, ...]
+    VN_coeff_select = VN_coeff[13000:13002, ...]
     ground_truth = np.copy(VN_coeff_select)
     # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
 

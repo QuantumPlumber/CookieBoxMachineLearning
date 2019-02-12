@@ -2,6 +2,9 @@ import numpy as np
 import Functions as fn
 import matplotlib.pyplot as plt
 import h5py
+import importlib
+
+importlib.relaod(fn)
 
 transfer='reformed_spectra_safe.hdf5'
 h5_reformed = h5py.File(transfer, 'r')
@@ -9,7 +12,7 @@ if 'VN_coeff' not in h5_reformed:
     raise Exception('No "VN_coeff" in file.')
 else:
     VN_coeff = h5_reformed['VN_coeff']
-ground_truther = VN_coeff[3000:3002, ...]
+ground_truther = VN_coeff[13000:13002, ...]
 ground_truther = ground_truther/np.max(np.abs(ground_truther))
 h5_reformed.close()
 
