@@ -113,7 +113,7 @@ def slicer(bot, top, spectra_shape, spectra_reshape, enum_theta, detector_thetas
         (top - bot) * spectra_shape[1], 16, spectra_shape[3]))
 
 
-def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single_pulse.hdf5',
+def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single.hdf5',
                         transfer='reformed_spectra.hdf5'):
     '''
     Transforms the raw simulation data into detector data of a given precision

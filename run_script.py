@@ -1,9 +1,13 @@
 import tensorflow as tf
 import numpy as np
 import Functions as fn
+import importlib
+
+importlib.reload(fn)
 
 testdatanorm = np.random.rand(100,16,100)
 testlabelsnorm = np.random.rand(100,100)
+
 
 classifier = tf.estimator.Estimator(
 
@@ -25,5 +29,5 @@ classifier = tf.estimator.Estimator(
 
 classifier.train(
     #input_fn=lambda: fn.input_functor(datanorm=testdatanorm, labelsnorm=testlabelsnorm, batch_size=1),
-    input_fn=lambda: fn.input_hdf5_functor(transfer='reformed_spectra_final.hdf5', batch_size=1),
-    steps=1)
+    input_fn=lambda: fn.input_hdf5_functor(transfer='reformed_spectra_safe.hdf5', select=10000, batch_size=1),
+    steps=100)
