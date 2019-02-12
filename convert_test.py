@@ -1,8 +1,10 @@
+import importlib
+import h5py
+import DataHandling as DH
 
-import tensorflow as tf
-import numpy as np
+importlib.reload(DH)
 
-from DataHandling import transform_2_TFRecord
+DH.transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single.hdf5', transfer='reformed_spectra.hdf5')
 
-transform_2_TFRecord()
-
+#h5_file = h5py.File('reformed_spectra.hdf5','r')
+#print(h5_file.keys())
