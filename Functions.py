@@ -21,7 +21,7 @@ def input_functor(datanorm, labelsnorm, batch_size):
     return dataset
 
 
-def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=1000, batch_size=1):
+def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000), batch_size=1):
     h5_reformed = h5py.File(transfer, 'r')
 
     if 'Spectra16' not in h5_reformed:
@@ -36,9 +36,9 @@ def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=1000, batc
 
     random_sample = np.random.random_integers(0, Spectra16.shape[0] - 1, select)
     random_sorted = np.sort(random_sample)
-    Spectra16_select = Spectra16[0:select, ...]
+    Spectra16_select = Spectra16[select[0]:select[1], ...]
 
-    VN_coeff_select = VN_coeff[0:select, ...]
+    VN_coeff_select = VN_coeff[select[0]:select[1], ...]
     VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
 
     dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select, VN_coeff_select_expand))
@@ -48,7 +48,36 @@ def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=1000, batc
     return dataset.make_one_shot_iterator().get_next()
     # return dataset
 
-def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', batch_size=1):
+
+def evaluate_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000), batch_size=1000):
+    h5_reformed = h5py.File(transfer, 'r')
+
+    if 'Spectra16' not in h5_reformed:
+        raise Exception('No "Spectra16" in file.')
+    else:
+        Spectra16 = h5_reformed['Spectra16']
+
+    if 'VN_coeff' not in h5_reformed:
+        raise Exception('No "VN_coeff" in file.')
+    else:
+        VN_coeff = h5_reformed['VN_coeff']
+
+    random_sample = np.random.random_integers(0, Spectra16.shape[0] - 1, select)
+    random_sorted = np.sort(random_sample)
+    Spectra16_select = Spectra16[select[0]:select[1], ...]
+
+    VN_coeff_select = VN_coeff[select[0]:select[1], ...]
+    VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
+
+    dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select, VN_coeff_select_expand))
+    dataset = dataset.shuffle(Spectra16_select.shape[0]).batch(batch_size)
+
+    h5_reformed.close()
+    return dataset.make_one_shot_iterator().get_next()
+    # return dataset
+
+
+def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(3000, 3001), batch_size=1):
     h5_reformed = h5py.File(transfer, 'r')
     global ground_truth
 
@@ -62,9 +91,9 @@ def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', batch_size=1):
     else:
         VN_coeff = h5_reformed['VN_coeff']
 
-    Spectra16_select = Spectra16[13000:13002, ...]
+    Spectra16_select = Spectra16[select[0]:select[1], ...]
 
-    VN_coeff_select = VN_coeff[13000:13002, ...]
+    VN_coeff_select = VN_coeff[select[0]:select[1], ...]
     ground_truth = np.copy(VN_coeff_select)
     # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
 
@@ -94,7 +123,6 @@ def map_function_hdf5():
 
 
 def CNNmodel(features, labels, mode, params):
-
     cookie_list = []
     for cookie in range(params['NUM_COOKIES']):
         net = features[:, cookie, ...]
@@ -112,9 +140,12 @@ def CNNmodel(features, labels, mode, params):
     net = tf.layers.dense(inputs=net, units=params['OUT'], activation=tf.nn.tanh)
 
     net = tf.layers.flatten(net)
+    norm = tf.reduce_max(tf.sqrt(net[:, 0:100] ** 2 + net[:, 100:200] ** 2), axis=1, keepdims=True)
+    print(norm)
+    net = net / norm  # normalize explicitly
+    print(net)
     output = net
-    #output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
-
+    # output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
 
     ############### Prediction mode.
     # predicted_classes = tf.argmax(logits, 1)
@@ -129,12 +160,12 @@ def CNNmodel(features, labels, mode, params):
         return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
     loss = tf.losses.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
-    accuracy = tf.metrics.mean_squared_error(labels=tf.cast(labels,dtype=tf.float32), predictions=output, name='acc_op')
+    accuracy = tf.metrics.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
 
     ######## Evaluation mode
     if mode == tf.estimator.ModeKeys.EVAL:
         return tf.estimator.EstimatorSpec(
-            mode, loss=loss, eval_metric_ops=metrics)
+            mode, loss=loss, eval_metric_ops={'accuracy': accuracy})
 
     ######## Train mode
 

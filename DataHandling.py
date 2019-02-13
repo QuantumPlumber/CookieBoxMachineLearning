@@ -169,7 +169,7 @@ def transform_2_spectra(filename='../AttoStreakSimulations/TF_train_single.hdf5'
         hits_ref = h5_reformed['Hits']
     hits_ref = np.reshape(Hits, hits_reshape)
 
-    num_spectra = np.arange(0, spectra_shape[0], step=3)
+    num_spectra = np.arange(0, spectra_shape[0], step=100)
     num_spectra_top = np.append(num_spectra, np.array(spectra_shape[0]) - 1)[1:]
     bot_top = np.column_stack((num_spectra, num_spectra_top)).astype('int')
 
