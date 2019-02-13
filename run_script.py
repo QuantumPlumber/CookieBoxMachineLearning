@@ -5,14 +5,18 @@ import importlib
 
 importlib.reload(fn)
 
-testdatanorm = np.random.rand(100,16,100)
-testlabelsnorm = np.random.rand(100,100)
+#testdatanorm = np.random.rand(100, 16, 100)
+#testlabelsnorm = np.random.rand(100, 100)
 
+checkpointing_config = tf.estimator.RunConfig(
+    save_checkpoints_secs=20 * 60,  # Save checkpoints every 20 minutes.
+    keep_checkpoint_max=2,  # Retain the 10 most recent checkpoints.
+)
 
 classifier = tf.estimator.Estimator(
 
     model_fn=fn.CNNmodel,
-    model_dir='Model',
+    model_dir='Model_dense',
     params={
 
         # 'feature_columns': the_feature_column,
@@ -24,10 +28,5 @@ classifier = tf.estimator.Estimator(
         'POOL': 80,  # Global Pooling Label
         'DENSE': [160, 200, 200],  # Dense layers
         'OUT': 200  # output dimensions
-
-    })
-
-classifier.train(
-    #input_fn=lambda: fn.input_functor(datanorm=testdatanorm, labelsnorm=testlabelsnorm, batch_size=1),
-    input_fn=lambda: fn.input_hdf5_functor(transfer='reformed_spectra_safe.hdf5', select=10000, batch_size=1),
-    steps=100)
+    }
+)
