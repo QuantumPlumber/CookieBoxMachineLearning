@@ -6,7 +6,7 @@ import importlib
 
 importlib.reload(fn)
 
-transfer = 'reformed_spectra_safe.hdf5'
+transfer = 'reformed_spectra_densesapce_safe.hdf5'
 h5_reformed = h5py.File(transfer, 'r')
 if 'VN_coeff' not in h5_reformed:
     raise Exception('No "VN_coeff" in file.')
@@ -16,16 +16,25 @@ else:
 for key in list(h5_reformed.keys()):
     print('shape of {} is {}'.format(key, h5_reformed[key].shape))
 
-ground_truther = VN_coeff[29000:29002, ...]
-ground_truther = ground_truther / np.max(np.abs(ground_truther))
+cut_bot = 7500
+cut_top = 7518
+
+ground_truther = VN_coeff[cut_bot:cut_top, ...]
 h5_reformed.close()
 
 predictions = classifier.predict(
-    input_fn=lambda: fn.predict_hdf5_functor(transfer='reformed_spectra_safe.hdf5', select=(29000, 29002), batch_size=1))
+    input_fn=lambda: fn.predict_hdf5_functor(transfer='reformed_spectra_densesapce_safe.hdf5', select=(cut_bot, cut_top),
+                                             batch_size=1))
 
+fig, ax = plt.subplots(nrows=int(ground_truther.shape[0] / 3), ncols=int(2*3), figsize=(22, 17))
+grid = np.indices(dimensions=(int(ground_truther.shape[0] / 3), 3))
+row = grid[0].flatten()
+col = grid[1].flatten() * 2
+index = np.arange(ground_truther.shape[0])
+for ind, ro, co, predict in zip(index, row, col, predictions):
+    ax[ro, co].plot(ground_truther[ind].real, 'b', predict['output'][0:100], 'r')
+    ax[ro, co + 1].plot(ground_truther[ind].imag, 'b', predict['output'][100:200], 'r')
 
-for ground, predict in zip(ground_truther, predictions):
-    fig = plt.figure(figsize=(8, 8))
-    display(plt.plot(ground.real, 'b', predict['output'][0:100], 'r'))
-    fig = plt.figure(figsize=(8, 8))
-    display(plt.plot(ground.imag, 'b', predict['output'][100:200], 'r'))
+display(fig)
+
+fig.savefig('Images/sampleWaveforms4.png', dpi= 700)
