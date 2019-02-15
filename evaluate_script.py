@@ -6,8 +6,8 @@ import importlib
 
 importlib.reload(fn)
 
-
-evaluations = classifier.evaluate(
-    input_fn=lambda: fn.evaluate_hdf5_functor(transfer='reformed_spectra_safe.hdf5', select=(0, 100), batch_size=1))
+for i in range(3):
+    evaluations = classifier.evaluate(
+        input_fn=lambda: fn.evaluate_hdf5_functor(transfer='reformed_spectra_safe.hdf5', select=(0, 100), batch_size=1))
 
 
