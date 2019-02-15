@@ -79,7 +79,6 @@ def evaluate_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 100
 
 def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(3000, 3001), batch_size=1):
     h5_reformed = h5py.File(transfer, 'r')
-    global ground_truth
 
     if 'Spectra16' not in h5_reformed:
         raise Exception('No "Spectra16" in file.')
@@ -91,10 +90,12 @@ def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(3000, 3
     else:
         VN_coeff = h5_reformed['VN_coeff']
 
-    Spectra16_select = Spectra16[select[0]:select[1], ...]
+    #Spectra16_select = Spectra16[select[0]:select[1], ...]
+    #VN_coeff_select = VN_coeff[select[0]:select[1], ...]
 
-    VN_coeff_select = VN_coeff[select[0]:select[1], ...]
-    ground_truth = np.copy(VN_coeff_select)
+    Spectra16_select = Spectra16[select, ...]
+
+
     # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
 
     dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select))
