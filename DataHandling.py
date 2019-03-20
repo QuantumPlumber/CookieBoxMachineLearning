@@ -11,6 +11,7 @@ import tensorflow as tf
 import h5py
 import numpy as np
 import time
+import multiprocessing as mp
 import importlib as imp
 
 
@@ -402,7 +403,7 @@ def transform_2_TFRecord(filename='../AttoStreakSimulations/TF_train_single_puls
     return
 
 
-def gaussian_kernel_compute_mp(energy_points, Spectra):
+def gaussian_kernel_compute_mp(energy_points, hit_coutns, Spectra):
     # Convenience function to ensure destruction of intermediate large arrays.
 
     # reshape Spectra array before processing:
@@ -414,9 +415,11 @@ def gaussian_kernel_compute_mp(energy_points, Spectra):
     #  use the old trick of setting all zero values to some outrageous number.
     #  No compute penalty as we already compute full array.
     #  Solves problem of zero padding at end of ragged arrays.
-    energy_points_array = np.multiply.outer(np.ones_like(Spectra), energy_points)
-    Spectra[Spectra == 0.0] = 1000
-    gaussian_centers = np.multiply.outer(Spectra, np.ones_like(energy_points))
+    energy_points_array = np.multiply.outer(np.ones_like(spectra_reshaped), energy_points)
+    spectra_reshaped[spectra_reshaped == 0.0] = 1000
+    # waveforms = np.zeros_like(spectra_reshaped)
+
+    gaussian_centers = np.multiply.outer(spectra_reshaped, np.ones_like(energy_points))
 
     # Compute gaussian Kernel Density estimate over energy_points
     # waveforms must be summed over cookie
@@ -463,22 +466,25 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
     # print(shape)
     spectra_reshape = np.array([spectra_shape[0] * spectra_shape[1], 16, num_ebins])
     if 'Spectra16' not in h5_reformed:
-        detectors_ref = h5_reformed.create_dataset(name='Spectra16', compression='gzip', shape=spectra_reshape.tolist())
+        detectors_ref = h5_reformed.create_dataset(name='Spectra16', compression='gzip', shape=spectra_reshape.tolist(),
+                                                   chunks=(8, spectra_reshape[1], spectra_reshape[2]))
     else:
         detectors_ref = h5_reformed['Spectra16']
 
     vn_shape = np.array(VN_coeff.shape)
-    vn_reshape = np.append(spectra_reshape[0], vn_shape[1] * vn_shape[2])
+    vn_reshape = np.array([spectra_reshape[0], vn_shape[1] * vn_shape[2]])
     if 'VN_coeff' not in h5_reformed:
         vn_co_ref = h5_reformed.create_dataset(name='VN_coeff', shape=vn_reshape.tolist(), compression='gzip',
-                                               dtype='complex128')
+                                               dtype='complex128',
+                                               chunks=(8, vn_reshape[1]))
     else:
         vn_co_ref = h5_reformed['VN_coeff']
 
     hits_shape = np.array(Hits.shape)
-    hits_reshape = np.array(hits_shape[0] * hits_shape[1], hits_shape[2])
+    hits_reshape = np.array([hits_shape[0] * hits_shape[1], hits_shape[2]])
     if 'Hits' not in h5_reformed:
-        hits_ref = h5_reformed.create_dataset(name='Hits', shape=(hits_reshape.tolist(),))
+        hits_ref = h5_reformed.create_dataset(name='Hits', shape=hits_reshape.tolist(), compression='gzip',
+                                              chunks=(8, hits_reshape[1]))
     else:
         hits_ref = h5_reformed['Hits']
     # hits_ref = np.reshape(Hits, hits_reshape)
@@ -489,26 +495,41 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
 
     def data_generator(Hits, Spectra, VN_coeff, jump):
         for i in np.arange(0, spectra_shape[0], step=jump):
-            yield Hits[i:i + jump, ...], Spectra[i:i + jump, :, :, 0, :], VN_coeff[i:i + jump, ...], [i, i + jump]
+            yield Hits[i:i + jump, ...], Spectra[i:i + jump, :, :, 0, :], VN_coeff[i:i + jump, :, :], [i, i + jump]
 
-    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=100)
+    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=8)
+
+
+
 
     # Encapsulate memory heavy things in the slicer function so python is forced to free memory
-    for hh, ss, vnvn, b_slice in data_generator:
+    for hh, ss, vnvn, b_slice in sim_data:
         checkpoint = time.process_time()
 
         # reshape and record hits
-        local_hits_shape = hh.shape
-        local_hits_reshape = np.array(local_hits_shape[0] * local_hits_shape[1], local_hits_shape[2])
-        hits_ref[b_slice[0] * hits_shape[1]:b_slice[1] * hits_shape[1], :] = np.reshape(hh, newshape=local_hits_reshape)
+        local_hits_shape = np.array(hh.shape)
+        local_hits_reshape = np.array((local_hits_shape[0] * local_hits_shape[1], local_hits_shape[2]))
+        reshaped_hits = np.reshape(hh, newshape=local_hits_reshape)
+        hits_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :] = reshaped_hits
+
+        # fill in the vn coefficients, requires copying the array.
+        local_vn_shape = np.array(vnvn.shape)
+        local_vn_reshape = np.array([local_vn_shape[0], local_vn_shape[1] * local_vn_shape[2]])
+        vn_co_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :] = np.repeat(
+            np.reshape(vnvn, newshape=local_vn_reshape), repeats=spectra_shape[1], axis=0)
 
         # Create 16 detector lists, discards angle information.
-        transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, Spectra=ss)
+        transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, hit_coutns=reshaped_hits,
+                                                         Spectra=ss)
+        print(detectors_ref.shape)
+        detectors_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = transformed_spectra
 
         print('complete {} to {} of {}'.format(b_slice[0], b_slice[1], spectra_shape[0]))
 
         delta_t = checkpoint - time.process_time()
         print('Converted in {}'.format(delta_t))
+
+        break
 
     h5file.close()
     h5_reformed.close()
