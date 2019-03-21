@@ -9,8 +9,8 @@ importlib.reload(DH)
 if __name__ == '__main__':
     checkpoint_global = time.perf_counter()
 
-    DH.transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_mp_1.hdf5',
-                           transfer='reformed_TF_train_mp_1.hdf5')
+    DH.transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_mp_2.hdf5',
+                           transfer='reformed_TF_train_mp_2.hdf5')
 
     delta_t = checkpoint_global - time.perf_counter()
     print('Total Runtime was {}'.format(delta_t))

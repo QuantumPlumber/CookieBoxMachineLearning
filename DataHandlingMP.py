@@ -142,7 +142,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
 
         delta_t = checkpoint - time.perf_counter()
         print('Converted in {}'.format(delta_t))
-        if break_number > 10:
+        if break_number > 100000:
             break
         break_number += 1
 
