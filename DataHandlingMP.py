@@ -4,7 +4,7 @@ import time
 import multiprocessing as mp
 
 
-def gaussian_kernel_compute_mp(energy_points, hit_coutns, Spectra):
+def gaussian_kernel_compute_mp(energy_points, Spectra):
     # Convenience function to ensure destruction of intermediate large arrays.
 
     # reshape Spectra array before processing:
@@ -24,7 +24,7 @@ def gaussian_kernel_compute_mp(energy_points, hit_coutns, Spectra):
 
     # Compute gaussian Kernel Density estimate over energy_points
     # waveforms must be summed over cookie
-    waveforms = np.sum(np.exp(-(energy_points_array - gaussian_centers) ** 2 / (2 * .25 / 2.355)),
+    waveforms = np.sum(np.exp(-(energy_points_array - gaussian_centers) ** 2 / (8*2 * .25 / 2.355)),
                        axis=2)
 
     # print(waveforms)
@@ -96,16 +96,20 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
 
     def data_generator(Hits, Spectra, VN_coeff, jump):
         for i in np.arange(0, spectra_shape[0], step=jump):
-            yield Hits[i:i + jump, ...], Spectra[i:i + jump, :, :, 0, :], VN_coeff[i:i + jump, :, :], [i, i + jump]
+            yield Hits[i:i + jump, ...], Spectra[i:i + jump, :, :, 1, :], VN_coeff[i:i + jump, :, :], [i, i + jump]
 
-    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=8)
+    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=32)
 
+    # Create Pool
+    processes = mp.cpu_count()
+    pool = mp.Pool(processes)
+    print('Pooled {} threads for parallel computation'.format(processes))
 
-
-
+    #checkpoint_global = time.process_time()
+    break_number = 0
     # Encapsulate memory heavy things in the slicer function so python is forced to free memory
     for hh, ss, vnvn, b_slice in sim_data:
-        checkpoint = time.process_time()
+        checkpoint = time.perf_counter()
 
         # reshape and record hits
         local_hits_shape = np.array(hh.shape)
@@ -120,17 +124,30 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
             np.reshape(vnvn, newshape=local_vn_reshape), repeats=spectra_shape[1], axis=0)
 
         # Create 16 detector lists, discards angle information.
-        transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, hit_coutns=reshaped_hits,
-                                                         Spectra=ss)
-        print(detectors_ref.shape)
+        workers = []
+        for spect in ss:
+            argslist = (energy_points, np.expand_dims(spect, axis=0))
+            worker = pool.apply_async(gaussian_kernel_compute_mp, argslist)
+            workers.append(worker)
+
+            # transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, Spectra=ss)
+        transformed_spectra_list = []
+        for worker in workers:
+            transformed_spectra_list.append(worker.get())
+        transformed_spectra = np.concatenate(transformed_spectra_list, axis=0)
+
         detectors_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = transformed_spectra
 
         print('complete {} to {} of {}'.format(b_slice[0], b_slice[1], spectra_shape[0]))
 
-        delta_t = checkpoint - time.process_time()
+        delta_t = checkpoint - time.perf_counter()
         print('Converted in {}'.format(delta_t))
+        if break_number > 10:
+            break
+        break_number += 1
 
-        break
+    #delta_t = checkpoint_global - time.process_time()
+    #print('Total Runtime was {}'.format(delta_t))
 
     h5file.close()
     h5_reformed.close()
