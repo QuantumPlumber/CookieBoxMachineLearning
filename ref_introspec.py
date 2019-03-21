@@ -24,6 +24,6 @@ for ind, ro, co in zip(index, row, col):
     if ind == spectra.shape[0]-1:
         ax[ro].set_xlabel('electron energy [eV]')
 
-fig.savefig('Images/KernelDensityEstimate.png', dpi= 700)
+#fig.savefig('Images/KernelDensityEstimate.png', dpi= 700)
 
 h5_file.close()
