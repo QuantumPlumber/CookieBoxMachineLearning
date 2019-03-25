@@ -24,7 +24,7 @@ def gaussian_kernel_compute_mp(energy_points, Spectra):
 
     # Compute gaussian Kernel Density estimate over energy_points
     # waveforms must be summed over cookie
-    waveforms = np.sum(np.exp(-(energy_points_array - gaussian_centers) ** 2 / (8*2 * .25 / 2.355)),
+    waveforms = np.sum(np.exp(-(energy_points_array - gaussian_centers) ** 2 / (2 * .25 / 2.355)),
                        axis=2)
 
     # print(waveforms)
