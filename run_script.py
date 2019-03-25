@@ -5,8 +5,8 @@ import importlib
 
 importlib.reload(fn)
 
-#testdatanorm = np.random.rand(100, 16, 100)
-#testlabelsnorm = np.random.rand(100, 100)
+# testdatanorm = np.random.rand(100, 16, 100)
+# testlabelsnorm = np.random.rand(100, 100)
 
 checkpointing_config = tf.estimator.RunConfig(
     save_checkpoints_secs=20 * 60,  # Save checkpoints every 20 minutes.
@@ -16,7 +16,8 @@ checkpointing_config = tf.estimator.RunConfig(
 classifier = tf.estimator.Estimator(
 
     model_fn=fn.CNNmodel,
-    model_dir='Model_dense',
+    model_dir='Model_mp_1',
+    config=checkpointing_config,
     params={
 
         # 'feature_columns': the_feature_column,

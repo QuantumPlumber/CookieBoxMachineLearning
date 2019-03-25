@@ -34,8 +34,8 @@ def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000),
     else:
         VN_coeff = h5_reformed['VN_coeff']
 
-    random_sample = np.random.random_integers(0, Spectra16.shape[0] - 1, select)
-    random_sorted = np.sort(random_sample)
+    #random_sample = np.random.random_integers(0, Spectra16.shape[0] - 1, select)
+    #random_sorted = np.sort(random_sample)
     Spectra16_select = Spectra16[select[0]:select[1], ...]
 
     VN_coeff_select = VN_coeff[select[0]:select[1], ...]
@@ -93,7 +93,7 @@ def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(3000, 3
     #Spectra16_select = Spectra16[select[0]:select[1], ...]
     #VN_coeff_select = VN_coeff[select[0]:select[1], ...]
 
-    Spectra16_select = Spectra16[select, ...]
+    Spectra16_select = Spectra16[select[0]:select[1], ...]
 
 
     # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
@@ -115,7 +115,7 @@ def input_hdf5_functor_map(data, labels, batch_size):
     dataset = tf.data.Dataset.from_tensor_slices((data[:, :, -300:-1], labels))
     dataset = dataset.shuffle(data_shape[0]).repeat().batch(batch_size)
     return dataset.make_one_shot_iterator().get_next()
-    return dataset
+    #return dataset
 
 
 def map_function_hdf5():
@@ -142,9 +142,9 @@ def CNNmodel(features, labels, mode, params):
 
     net = tf.layers.flatten(net)
     norm = tf.reduce_max(tf.sqrt(net[:, 0:100] ** 2 + net[:, 100:200] ** 2), axis=1, keepdims=True)
-    print(norm)
+    #print(norm)
     net = net / norm  # normalize explicitly
-    print(net)
+    #print(net)
     output = net
     # output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
 
@@ -170,7 +170,7 @@ def CNNmodel(features, labels, mode, params):
 
     ######## Train mode
 
-    optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
+    optimizer = tf.train.AdagradOptimizer(learning_rate=.01)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     if mode == tf.estimator.ModeKeys.TRAIN:

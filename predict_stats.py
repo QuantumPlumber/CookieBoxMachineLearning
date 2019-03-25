@@ -6,7 +6,8 @@ import importlib
 
 importlib.reload(fn)
 
-transfer = 'reformed_spectra_densesapce_safe.hdf5'
+#transfer = 'reformed_spectra_densesapce_safe.hdf5'
+transfer = 'reformed_TF_train_mp_1.hdf5'
 h5_reformed = h5py.File(transfer, 'r')
 if 'VN_coeff' not in h5_reformed:
     raise Exception('No "VN_coeff" in file.')
@@ -24,7 +25,7 @@ phase_error = np.zeros(shape=VN_coeff.shape)
 
 for run, cut in enumerate(cuts):
     predictions = classifier.predict(
-        input_fn=lambda: fn.predict_hdf5_functor(transfer='reformed_spectra_densesapce_safe.hdf5', select=cut,
+        input_fn=lambda: fn.predict_hdf5_functor(transfer=transfer, select=cut,
                                                  batch_size=1))
 
     ground_truther = VN_coeff[cut[0]:cut[1], ...]
@@ -55,4 +56,4 @@ fig.colorbar(im, ax=ax[0])
 im = ax[1].pcolormesh(phase_error[0:12000])
 fig.colorbar(im, ax=ax[1])
 
-fig.savefig('Images/percent_errors2.png', dpi= 700)
+#fig.savefig('Images/percent_errors2.png', dpi= 700)
