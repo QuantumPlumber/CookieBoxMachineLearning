@@ -6,9 +6,11 @@ import importlib
 
 importlib.reload(fn)
 
-#transfer = 'reformed_spectra_densesapce_safe.hdf5'
-#transfer = 'reformed_TF_train_mp_1.hdf5'
-transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
+# transfer = 'reformed_spectra_densesapce_safe.hdf5'
+# transfer = 'reformed_TF_train_mp_1.hdf5'
+# transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
+transfer = 'reformed_TF_train_widegate.hdf5'
+
 h5_reformed = h5py.File(transfer, 'r')
 if 'VN_coeff' not in h5_reformed:
     raise Exception('No "VN_coeff" in file.')
@@ -20,7 +22,6 @@ for key in list(h5_reformed.keys()):
 
 cut_bot = 6500
 cut_top = 6518
-
 
 ground_truther = VN_coeff[cut_bot:cut_top, ...]
 h5_reformed.close()
@@ -36,9 +37,13 @@ row = grid[0].flatten()
 col = grid[1].flatten() * 2
 index = np.arange(ground_truther.shape[0])
 for ind, ro, co, predict in zip(index, row, col, predictions):
-    ax[ro, co].plot(ground_truther[ind].real, 'b', predict['output'][0:100], 'r')
-    ax[ro, co + 1].plot(ground_truther[ind].imag, 'b', predict['output'][100:200], 'r')
+    pred_real = predict['output'][0:100]
+    pred_imag = predict['output'][100:200]
+    ax[ro, co].plot(ground_truther[ind].real, 'b', pred_real, 'r')
+    ax[ro, co + 1].plot(ground_truther[ind].imag, 'b', pred_imag, 'r')
+    print(np.sum((ground_truther[ind].real - pred_real) ** 2 + (ground_truther[ind].imag - pred_imag) ** 2) / (
+                pred_real.shape[0] + pred_imag.shape[0]))
 
-#display(fig)
+    # display(fig)
 
-#fig.savefig('Images/sampleWaveforms4.png', dpi= 700)
+    # fig.savefig('Images/sampleWaveforms4.png', dpi= 700)

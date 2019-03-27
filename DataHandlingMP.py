@@ -9,6 +9,7 @@ def gaussian_kernel_compute_mp(energy_points, Spectra):
 
     # reshape Spectra array before processing:
     local_spectra_shape = Spectra.shape
+    print(Spectra.shape)
     local_spectra_reshape = np.array(
         [local_spectra_shape[0] * local_spectra_shape[1], local_spectra_shape[2], local_spectra_shape[3]])
     spectra_reshaped = np.reshape(Spectra, newshape=local_spectra_reshape)
@@ -96,7 +97,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
 
     def data_generator(Hits, Spectra, VN_coeff, jump):
         for i in np.arange(0, spectra_shape[0], step=jump):
-            yield Hits[i:i + jump, ...], Spectra[i:i + jump, :, :, 1, :], VN_coeff[i:i + jump, :, :], [i, i + jump]
+            yield Hits[i:i + jump, :, :], Spectra[i:i + jump, :, :, 1, 0:350], VN_coeff[i:i + jump, :, :], [i, i + jump]
 
     sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=32)
 
@@ -120,29 +121,32 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
         # fill in the vn coefficients, requires copying the array.
         local_vn_shape = np.array(vnvn.shape)
         local_vn_reshape = np.array([local_vn_shape[0], local_vn_shape[1] * local_vn_shape[2]])
-        vn_co_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :] = np.repeat(
-            np.reshape(vnvn, newshape=local_vn_reshape), repeats=spectra_shape[1], axis=0)
+        vn_reshped = np.repeat(
+            np.reshape(vnvn, newshape=local_vn_reshape), repeats=hits_shape[1], axis=0)
+        vn_co_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :] = vn_reshped
 
         # Create 16 detector lists, discards angle information.
         workers = []
         for spect in ss:
             argslist = (energy_points, np.expand_dims(spect, axis=0))
+            print(argslist[1].shape)
             worker = pool.apply_async(gaussian_kernel_compute_mp, argslist)
             workers.append(worker)
 
-            # transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, Spectra=ss)
+        # transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, Spectra=ss)
         transformed_spectra_list = []
         for worker in workers:
             transformed_spectra_list.append(worker.get())
+        print(transformed_spectra_list[0].shape)
         transformed_spectra = np.concatenate(transformed_spectra_list, axis=0)
-
+        print(transformed_spectra.shape)
         detectors_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = transformed_spectra
 
         print('complete {} to {} of {}'.format(b_slice[0], b_slice[1], spectra_shape[0]))
 
         delta_t = checkpoint - time.perf_counter()
         print('Converted in {}'.format(delta_t))
-        if break_number > 100000:
+        if break_number == 1:
             break
         break_number += 1
 
