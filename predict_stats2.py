@@ -20,7 +20,7 @@ for key in list(h5_reformed.keys()):
 cuts = [[0, 6000], [6000, 12000], [12000, 18000], [18000, 24000], [24000, 30000]]
 cuts = [[0, 6000], [6000, 12000]]
 cuts = [[0, 6000], [6000, 12000]]
-cuts = [[0,100]]
+cuts = [[0,5000]]
 
 mag_error = np.zeros(shape=VN_coeff.shape)
 phase_error = np.zeros(shape=VN_coeff.shape)
@@ -31,25 +31,21 @@ for run, cut in enumerate(cuts):
                                                  batch_size=1))
 
     ground_truther = VN_coeff[cut[0]:cut[1], ...]
+    mag_truth = np.abs(ground_truther)
+    mag_predict = np.zeros_like(mag_truth)
+    phase_truth = np.angle(ground_truther)
+    phase_predict = np.zeros_like(phase_truth)
+
     predict_truther = np.zeros_like(ground_truther, dtype='complex64')
+
     i = 0
     for predict in predictions:
-        predict_truther[i, ...] = predict['output'][0:100] + 1J * predict['output'][100:200]
+        mag_predict[i, ...] = predict['output'][0:100]
+        phase_predict[i, ...] = predict['output'][100:200]
         i = i + 1
 
-    abs_ground_truther = np.abs(ground_truther)
-    abs_predict_truther = np.abs(predict_truther)
-    theta_ground_truther = np.angle(ground_truther)
-    theta_predict_truther = np.angle(predict_truther)
-    '''
-    mag_error[cut[0]:cut[1], ...] = 2*(np.abs(ground_truther + predict_truther) - np.abs(
-        ground_truther - predict_truther)) / (np.abs(ground_truther + predict_truther) + np.abs(
-            ground_truther - predict_truther))
-    phase_error[cut[0]:cut[1], ...] = 2 * (np.abs(theta_predict_truther - theta_ground_truther)) / (np.abs(
-        theta_predict_truther) + np.abs(theta_ground_truther))
-    '''
-    mag_error[cut[0]:cut[1], ...] = np.abs(ground_truther - predict_truther)
-    phase_error[cut[0]:cut[1], ...] = np.angle(ground_truther - predict_truther)
+    mag_error[cut[0]:cut[1], ...] = np.abs(mag_truth - mag_predict)
+    phase_error[cut[0]:cut[1], ...] = np.abs(phase_truth - phase_predict)
 
     print('completed run {}'.format(run))
 

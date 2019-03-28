@@ -36,10 +36,19 @@ def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000),
 
     # random_sample = np.random.random_integers(0, Spectra16.shape[0] - 1, select)
     # random_sorted = np.sort(random_sample)
-    Spectra16_select = Spectra16[select[0]:select[1], ...]
 
+    # selections = np.arange(select[0], select[1], 10)
+    # Spectra16_select = Spectra16[selections, ...]
+    # VN_coeff_select = VN_coeff[selections, ...]
+    # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
+
+    # Spectra16_select = Spectra16[select[0]:select[1], ...]
+    # VN_coeff_select = VN_coeff[select[0]:select[1], ...]
+    # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
+
+    Spectra16_select = Spectra16[select[0]:select[1], ...]
     VN_coeff_select = VN_coeff[select[0]:select[1], ...]
-    VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
+    VN_coeff_select_expand = np.concatenate((np.abs(VN_coeff_select), np.angle(VN_coeff_select)), axis=1)
 
     dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select, VN_coeff_select_expand))
     dataset = dataset.shuffle(Spectra16_select.shape[0]).repeat().batch(batch_size)
@@ -131,7 +140,7 @@ def CNNmodel(features, labels, mode, params):
         # net = tf.layers.max_pooling1d(inputs=net, strides=1, pool_size=params['POOL'])
         for nodes in params['COOKIE_DENSE']:
             net = tf.layers.dense(inputs=net, units=nodes, activation=tf.nn.tanh)
-            #kernel_initializer=tf.initializers.random_uniform
+            # kernel_initializer=tf.initializers.random_uniform
         cookie_list.append(net)
 
     cookie_box = tf.concat(values=cookie_list, axis=1)
@@ -146,6 +155,65 @@ def CNNmodel(features, labels, mode, params):
     net = net / norm  # normalize explicitly
     # print(net)
     output = net
+    # output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
+
+    ############### Prediction mode.
+    # predicted_classes = tf.argmax(logits, 1)
+
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        predictions = {
+
+            'output': output,
+
+        }
+
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
+
+    loss = tf.losses.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
+    accuracy = tf.metrics.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
+
+    ######## Evaluation mode
+    if mode == tf.estimator.ModeKeys.EVAL:
+        return tf.estimator.EstimatorSpec(
+            mode, loss=loss, eval_metric_ops={'accuracy': accuracy})
+
+    ######## Train mode
+
+    optimizer = tf.train.AdagradOptimizer(learning_rate=.1)
+    train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+
+def CNNmodelMagPhase(features, labels, mode, params):
+    cookie_list = []
+    for cookie in range(params['NUM_COOKIES']):
+        net = features[:, cookie, ...]
+        # for filters, window in params['CNN']:
+        #    net = tf.layers.conv1d(inputs=net, filters=filters, kernel_size=window, activation=tf.nn.relu)
+        # net = tf.layers.max_pooling1d(inputs=net, strides=1, pool_size=params['POOL'])
+        for nodes in params['COOKIE_DENSE']:
+            net = tf.layers.dense(inputs=net, units=nodes, activation=tf.nn.tanh)
+            # kernel_initializer=tf.initializers.random_uniform
+        cookie_list.append(net)
+
+    cookie_box = tf.concat(values=cookie_list, axis=1)
+    for nodes in params['DENSE']:
+        net = tf.layers.dense(inputs=cookie_box, units=nodes, activation=tf.nn.tanh)
+
+    net = tf.layers.dense(inputs=net, units=params['OUT'], activation=tf.nn.tanh)
+
+    net = tf.layers.flatten(net)
+
+    # normalize magnitude and phase
+    norm_mag = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
+    mag = net[:, 0:100] / norm_mag
+    norm_phase = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
+    phase = np.pi * net[:, 100:200] / norm_phase
+
+    # print(net)
+    output = tf.concat((mag, phase), axis=1)
     # output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
 
     ############### Prediction mode.

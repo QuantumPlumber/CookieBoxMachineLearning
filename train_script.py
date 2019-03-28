@@ -38,12 +38,13 @@ def chunker(min_index=24000, max_index=100000, step=6000):
 #transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
 transfer = 'reformed_TF_train_widegate.hdf5'
 
-step = 5000
+step = 100
 min_index = 00000
-max_index = 6000
+max_index = 100
+train_step = 1000
 chunks = chunker(min_index=min_index, max_index=max_index, step=step)
 for chunk in chunks:
     classifier.train(
         input_fn=lambda: fn.input_hdf5_functor(transfer=transfer, select=chunk,
                                                batch_size=1),
-        steps=step)
+        steps=train_step)
