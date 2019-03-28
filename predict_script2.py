@@ -24,6 +24,10 @@ cut_bot = 00
 cut_top = 10
 
 ground_truther = VN_coeff[cut_bot:cut_top, ...]
+mag_truth = np.abs(ground_truther)
+phase_truth = np.angle(ground_truther)
+
+
 h5_reformed.close()
 
 predictions = classifier.predict(
@@ -38,12 +42,10 @@ row = grid[0].flatten()
 col = grid[1].flatten() * 2
 index = np.arange(ground_truther.shape[0])
 for ind, ro, co, predict in zip(index, row, col, predictions):
-    pred_real = predict['output'][0:100]
-    pred_imag = predict['output'][100:200]
-    ax[ro, co].plot(ground_truther[ind].real, 'b', pred_real, 'r')
-    ax[ro, co + 1].plot(ground_truther[ind].imag, 'b', pred_imag, 'r')
-    print(np.sum((ground_truther[ind].real - pred_real) ** 2 + (ground_truther[ind].imag - pred_imag) ** 2) / (
-            pred_real.shape[0] + pred_imag.shape[0]))
+    mag_pred = predict['output'][0:100]
+    phase_pred = predict['output'][100:200]
+    ax[ro, co].plot(mag_truth[ind], 'b', mag_pred, 'r')
+    ax[ro, co + 1].plot(phase_truth[ind], 'b', phase_pred, 'r')
 
     # display(fig)
 
