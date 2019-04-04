@@ -12,16 +12,35 @@ import h5py
 print(tf.__version__)
 
 
-def input_functor(datanorm, labelsnorm, batch_size):
-    long = int(datanorm.shape[0])
-    # long = int(datanorm.shape[0])
-    dataset = tf.data.Dataset.from_tensor_slices((datanorm, labelsnorm))
-    dataset = dataset.shuffle(long).repeat().batch(batch_size)
+def TFR_map_func(sequence_example):
+    '''
+    This map function returns the data in (input,label) pairs. A new dataset is created
+
+    :param sequence_example:
+    :return:
+    '''
+    context_features = {'VN_coeff': tf.FixedLenFeature(shape=(200), dtype=tf.float32)}
+    sequence_features = {'spectra': tf.FixedLenSequenceFeature(shape=(100), dtype=tf.float32)}
+    data = tf.parse_single_sequence_example(
+        sequence_example,
+        context_features=context_features,
+        sequence_features=sequence_features
+    )
+    return data[1]['spectra'], data[0]['VN_coeff']
+
+
+def input_TFR_functor(TFRecords_file_list=[], long=100000, repeat=1, batch_size=64):
+    filenames = tf.data.Dataset.from_tensor_slices(TFRecords_file_list)
+    dataset = tf.data.TFRecordDataset(filenames)
+
+    dataset = dataset.map(TFR_map_func)
+
+    dataset = dataset.shuffle(long).repeat(count=repeat).batch(batch_size=batch_size)
     return dataset.make_one_shot_iterator().get_next()
-    return dataset
 
 
-def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000), batch_size=1):
+
+def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000), batch_size=64):
     h5_reformed = h5py.File(transfer, 'r')
 
     if 'Spectra16' not in h5_reformed:
@@ -46,8 +65,8 @@ def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000),
     # VN_coeff_select = VN_coeff[select[0]:select[1], ...]
     # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
 
-    Spectra16_select = Spectra16[select[0]:select[1], ...]
-    VN_coeff_select = VN_coeff[select[0]:select[1], ...]
+    Spectra16_select = Spectra16[select, ...]
+    VN_coeff_select = VN_coeff[select, ...]
     VN_coeff_select_expand = np.concatenate((np.abs(VN_coeff_select), np.angle(VN_coeff_select)), axis=1)
 
     dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select, VN_coeff_select_expand))
@@ -210,7 +229,7 @@ def CNNmodelMagPhase(features, labels, mode, params):
     norm_mag = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
     mag = net[:, 0:100] / norm_mag
     norm_phase = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
-    phase = np.pi * net[:, 100:200] / norm_phase
+    phase = np.pi * net[:, 100:200]
 
     # print(net)
     output = tf.concat((mag, phase), axis=1)
