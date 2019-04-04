@@ -28,23 +28,27 @@ classifier.train(
 '''
 
 
-def chunker(min_index=24000, max_index=100000, step=6000):
-    for i in np.arange(min_index, max_index, step):
-        yield (i, i + step)
+def chunker(step=5000, indexes=(0, 1), random_shuffled_index=(0, 1)):
+    for i in indexes:
+        yield np.sort(random_shuffled_index[i: i + step])
 
 
-#transfer = 'reformed_spectra_densesapce_safe.hdf5'
-#transfer = 'reformed_TF_train_mp_1.hdf5'
-#transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
-transfer = 'reformed_TF_train_widegate.hdf5'
+# transfer = 'reformed_spectra_densesapce_safe.hdf5'
+# transfer = 'reformed_TF_train_mp_1.hdf5'
+transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
+# transfer = 'reformed_TF_train_widegate.hdf5'
 
-step = 100
+step = 100000
 min_index = 00000
-max_index = 100
-train_step = 1000
-chunks = chunker(min_index=min_index, max_index=max_index, step=step)
+max_index = 100000
+indexes = np.arange(min_index, max_index, step)
+random_shuffled_index = np.arange(min_index, max_index)
+np.random.shuffle(random_shuffled_index)
+chunks = chunker(step=step, indexes=indexes, random_shuffled_index=random_shuffled_index)
+
+batch_size = 64
+train_step = step // batch_size
 for chunk in chunks:
     classifier.train(
-        input_fn=lambda: fn.input_hdf5_functor(transfer=transfer, select=chunk,
-                                               batch_size=1),
+        input_fn=lambda: fn.input_hdf5_functor(transfer=transfer, select=chunk, batch_size=batch_size),
         steps=train_step)

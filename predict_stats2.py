@@ -7,7 +7,9 @@ import importlib
 importlib.reload(fn)
 
 # transfer = 'reformed_spectra_densesapce_safe.hdf5'
-transfer = 'reformed_TF_train_mp_1.hdf5'
+#transfer = 'reformed_TF_train_mp_1.hdf5'
+transfer = 'reformed_TF_train_widegate.hdf5'
+
 h5_reformed = h5py.File(transfer, 'r')
 if 'VN_coeff' not in h5_reformed:
     raise Exception('No "VN_coeff" in file.')
@@ -20,7 +22,14 @@ for key in list(h5_reformed.keys()):
 cuts = [[0, 6000], [6000, 12000], [12000, 18000], [18000, 24000], [24000, 30000]]
 cuts = [[0, 6000], [6000, 12000]]
 cuts = [[0, 6000], [6000, 12000]]
-cuts = [[0,5000]]
+
+
+def cuts_generator(min_val=0, max_val=1000, step=100):
+    for ii in np.arange(min_val, max_val, step):
+        yield ([ii, ii + step])
+
+
+cuts = cuts_generator(min_val=0, max_val=9000, step=5000)
 
 mag_error = np.zeros(shape=VN_coeff.shape)
 phase_error = np.zeros(shape=VN_coeff.shape)
@@ -52,9 +61,9 @@ for run, cut in enumerate(cuts):
 h5_reformed.close()
 
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 20))
-im = ax[0].pcolormesh(mag_error[cut[0]:cut[1]])
+im = ax[0].pcolormesh(mag_error)
 fig.colorbar(im, ax=ax[0])
-im = ax[1].pcolormesh(phase_error[cut[0]:cut[1]])
+im = ax[1].pcolormesh(phase_error)
 fig.colorbar(im, ax=ax[1])
 
 # fig.savefig('Images/percent_errors2.png', dpi= 700)
