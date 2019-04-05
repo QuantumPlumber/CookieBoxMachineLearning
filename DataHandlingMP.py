@@ -9,7 +9,7 @@ def gaussian_kernel_compute_mp(energy_points, Spectra):
 
     # reshape Spectra array before processing:
     local_spectra_shape = Spectra.shape
-    print(Spectra.shape)
+    #print(Spectra.shape)
     local_spectra_reshape = np.array(
         [local_spectra_shape[0] * local_spectra_shape[1], local_spectra_shape[2], local_spectra_shape[3]])
     spectra_reshaped = np.reshape(Spectra, newshape=local_spectra_reshape)
@@ -64,12 +64,14 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
     energy_range = 100.  # 100 eV was used in the code
     energy_points = np.linspace(0, energy_range, num_ebins)
 
+    chunksize = mp.cpu_count() // 3 * 2
+
     spectra_shape = np.array(Spectra.shape)
     # print(shape)
     spectra_reshape = np.array([spectra_shape[0] * spectra_shape[1], 16, num_ebins])
     if 'Spectra16' not in h5_reformed:
         detectors_ref = h5_reformed.create_dataset(name='Spectra16', compression='gzip', shape=spectra_reshape.tolist(),
-                                                   chunks=(8, spectra_reshape[1], spectra_reshape[2]))
+                                                   chunks=(chunksize, spectra_reshape[1], spectra_reshape[2]))
     else:
         detectors_ref = h5_reformed['Spectra16']
 
@@ -78,7 +80,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
     if 'VN_coeff' not in h5_reformed:
         vn_co_ref = h5_reformed.create_dataset(name='VN_coeff', shape=vn_reshape.tolist(), compression='gzip',
                                                dtype='complex128',
-                                               chunks=(8, vn_reshape[1]))
+                                               chunks=(chunksize, vn_reshape[1]))
     else:
         vn_co_ref = h5_reformed['VN_coeff']
 
@@ -86,7 +88,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
     hits_reshape = np.array([hits_shape[0] * hits_shape[1], hits_shape[2]])
     if 'Hits' not in h5_reformed:
         hits_ref = h5_reformed.create_dataset(name='Hits', shape=hits_reshape.tolist(), compression='gzip',
-                                              chunks=(8, hits_reshape[1]))
+                                              chunks=(chunksize, hits_reshape[1]))
     else:
         hits_ref = h5_reformed['Hits']
     # hits_ref = np.reshape(Hits, hits_reshape)
@@ -99,10 +101,10 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
         for i in np.arange(0, spectra_shape[0], step=jump):
             yield Hits[i:i + jump, :, :], Spectra[i:i + jump, :, :, 1, 0:350], VN_coeff[i:i + jump, :, :], [i, i + jump]
 
-    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=32)
+    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=chunksize)
 
     # Create Pool
-    processes = mp.cpu_count()
+    processes = chunksize
     pool = mp.Pool(processes)
     print('Pooled {} threads for parallel computation'.format(processes))
 
@@ -129,7 +131,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
         workers = []
         for spect in ss:
             argslist = (energy_points, np.expand_dims(spect, axis=0))
-            print(argslist[1].shape)
+            #print(argslist[1].shape)
             worker = pool.apply_async(gaussian_kernel_compute_mp, argslist)
             workers.append(worker)
 
@@ -137,16 +139,16 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
         transformed_spectra_list = []
         for worker in workers:
             transformed_spectra_list.append(worker.get())
-        print(transformed_spectra_list[0].shape)
+        #print(transformed_spectra_list[0].shape)
         transformed_spectra = np.concatenate(transformed_spectra_list, axis=0)
-        print(transformed_spectra.shape)
+        #print(transformed_spectra.shape)
         detectors_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = transformed_spectra
 
         print('complete {} to {} of {}'.format(b_slice[0], b_slice[1], spectra_shape[0]))
 
         delta_t = checkpoint - time.perf_counter()
         print('Converted in {}'.format(delta_t))
-        if break_number == 1:
+        if break_number == 100000:
             break
         break_number += 1
 

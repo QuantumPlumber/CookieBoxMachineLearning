@@ -39,7 +39,6 @@ def input_TFR_functor(TFRecords_file_list=[], long=100000, repeat=1, batch_size=
     return dataset.make_one_shot_iterator().get_next()
 
 
-
 def input_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(0, 1000), batch_size=64):
     h5_reformed = h5py.File(transfer, 'r')
 
@@ -257,7 +256,71 @@ def CNNmodelMagPhase(features, labels, mode, params):
 
     ######## Train mode
 
-    optimizer = tf.train.AdagradOptimizer(learning_rate=.1)
+    optimizer = tf.train.AdagradOptimizer(learning_rate=.01)
+    train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+
+def FC_large_sym_model(features, labels, mode, params):
+    cookie_list = []
+    for cookie in range(params['NUM_COOKIES']):
+        net = features[:, cookie, ...]
+        if cookie == 0:
+            for name, nodes in enumerate(params['COOKIE_DENSE']):
+                net = tf.layers.dense(inputs=net, units=nodes, activation=tf.nn.tanh, name='layer_{}'.format(name),
+                                      reuse=False)
+                # kernel_initializer=tf.initializers.random_uniform
+            cookie_list.append(net)
+        else:
+            for name, nodes in enumerate(params['COOKIE_DENSE']):
+                net = tf.layers.dense(inputs=net, units=nodes, activation=tf.nn.tanh, name='layer_{}'.format(name),
+                                      reuse=True)
+                # kernel_initializer=tf.initializers.random_uniform
+            cookie_list.append(net)
+
+    cookie_box = tf.concat(values=cookie_list, axis=1)
+    for nodes in params['DENSE']:
+        net = tf.layers.dense(inputs=cookie_box, units=nodes, activation=tf.nn.tanh)
+
+    net = tf.layers.dense(inputs=net, units=params['OUT'], activation=tf.nn.tanh)
+
+    net = tf.layers.flatten(net)
+
+    # normalize magnitude and phase
+    norm_mag = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
+    mag = net[:, 0:100] / norm_mag
+    norm_phase = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
+    phase = np.pi * net[:, 100:200]
+
+    # print(net)
+    output = tf.concat((mag, phase), axis=1)
+    # output = tf.cast(tf.complex(net[:, 0:100], net[:, 100:200]), dtype=tf.complex128)
+
+    ############### Prediction mode.
+    # predicted_classes = tf.argmax(logits, 1)
+
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        predictions = {
+
+            'output': output,
+
+        }
+
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
+
+    loss = tf.losses.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
+    accuracy = tf.metrics.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
+
+    ######## Evaluation mode
+    if mode == tf.estimator.ModeKeys.EVAL:
+        return tf.estimator.EstimatorSpec(
+            mode, loss=loss, eval_metric_ops={'accuracy': accuracy})
+
+    ######## Train mode
+
+    optimizer = tf.train.AdagradOptimizer(learning_rate=.01)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     if mode == tf.estimator.ModeKeys.TRAIN:
