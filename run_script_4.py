@@ -17,9 +17,8 @@ checkpointing_config = tf.estimator.RunConfig(
 
 classifier = tf.estimator.Estimator(
 
-    model_fn=fn.FC_large_sym_model,
-    # model_dir='Model_large_sym',
-    model_dir='scaled_sym_model',
+    model_fn=fn.FC_sym_model_ri,
+    model_dir='large_ri_model',
     config=checkpointing_config,
     params={
 
@@ -28,9 +27,8 @@ classifier = tf.estimator.Estimator(
         # Layers.
         'NUM_COOKIES': 16,
         'COOKIE_DENSE': [100, 80, 40, 20],
-        'CNN': [[32, 10]],  # Convolutional layers
-        'POOL': [10, 5],  # Global Pooling Label
-
+        'CNN': [[32, 10], [32, 10]],  # Convolutional layers
+        'POOL': 80,  # Global Pooling Label
         'DENSE': [320, 200, 200, 200, 200],  # Dense layers
         'OUT': 200  # output dimensions
     }

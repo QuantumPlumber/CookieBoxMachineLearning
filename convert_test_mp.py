@@ -15,7 +15,7 @@ if __name__ == '__main__':
     #filename = '../AttoStreakSimulations/TF_train_widegate_protect.hdf5'
     #transfer = 'reformed_TF_train_widegate.hdf5'
 
-    filename = '../AttoStreakSimulations/TF_train_widegate_protect.hdf5'
+    filename = '../AttoStreakSimulations/TF_train_update.hdf5'
     transfer = 'convert_test.hdf5'
 
     DH.transform_2_spectra_from_mp(filename=filename, transfer=transfer)
