@@ -2,6 +2,7 @@ import numpy as np
 import time
 
 base_filename = 'reformed_TF_train_mp_1_quarter'
+#base_filename = 'TF_train_update_TFR'
 dataset_size = 100000
 TFR_filesize = 10000
 
@@ -17,14 +18,14 @@ for file in file_chunks:
     file_list.append(file)
 
 print(file_list)
-repeat = 2
-batch_size = 64
+repeat = 1
+batch_size = 1
 train_step = dataset_size*repeat
 
 checkpoint = time.perf_counter()
 
 classifier.train(
-    input_fn=lambda: fn.input_TFR_functor(TFRecords_file_list=file_list, long=TFR_filesize, repeat=repeat, batch_size=batch_size),
+    input_fn=lambda: fn.input_TFR_functor(TFRecords_file_list=file_list[0:1], long=TFR_filesize, repeat=repeat, batch_size=batch_size),
     steps=train_step)
 
 delta_t = checkpoint - time.perf_counter()

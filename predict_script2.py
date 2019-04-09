@@ -20,19 +20,22 @@ else:
 for key in list(h5_reformed.keys()):
     print('shape of {} is {}'.format(key, h5_reformed[key].shape))
 
-cut_bot = 00
-cut_top = 10
+cut_bot = 0000
+cut_top = 5000
 
-ground_truther = VN_coeff[cut_bot:cut_top, ...]
+cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=18))
+print(cut)
+ground_truther = VN_coeff[cut, ...]
 mag_truth = np.abs(ground_truther)
-phase_truth = np.angle(ground_truther)
-
+phase_truth = np.absolute(np.angle(ground_truther))
+#mag_truth = ground_truther.real
+#phase_truth = ground_truther.imag
 
 h5_reformed.close()
 
 predictions = classifier.predict(
     input_fn=lambda: fn.predict_hdf5_functor(transfer=transfer,
-                                             select=(cut_bot, cut_top),
+                                             select=cut,
                                              batch_size=1))
 
 fig, ax = plt.subplots(nrows=int(ground_truther.shape[0] / 3), ncols=int(2 * 3),
@@ -46,7 +49,7 @@ for ind, ro, co, predict in zip(index, row, col, predictions):
     phase_pred = predict['output'][100:200]
     ax[ro, co].plot(mag_truth[ind], 'b', mag_pred, 'r')
     ax[ro, co + 1].plot(phase_truth[ind], 'b', phase_pred, 'r')
-
+    print(np.sum(((mag_pred-mag_truth[ind])**2 + (phase_pred-phase_truth[ind])**2))/200.)
     # display(fig)
 
     # fig.savefig('Images/sampleWaveforms4.png', dpi= 700)

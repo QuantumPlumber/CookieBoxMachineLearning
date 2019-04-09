@@ -35,8 +35,9 @@ def chunker(step=5000, indexes=(0, 1), random_shuffled_index=(0, 1)):
 
 # transfer = 'reformed_spectra_densesapce_safe.hdf5'
 # transfer = 'reformed_TF_train_mp_1.hdf5'
-transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
+ transfer = 'reformed_TF_train_mp_1_quarter.hdf5'
 # transfer = 'reformed_TF_train_widegate.hdf5'
+
 
 step = 100000
 min_index = 00000

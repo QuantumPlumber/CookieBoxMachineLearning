@@ -64,7 +64,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
     energy_range = 100.  # 100 eV was used in the code
     energy_points = np.linspace(0, energy_range, num_ebins)
 
-    chunksize = mp.cpu_count() // 3 * 2
+    chunksize = mp.cpu_count()
 
     spectra_shape = np.array(Spectra.shape)
     # print(shape)
