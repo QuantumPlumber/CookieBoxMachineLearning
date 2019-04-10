@@ -1,8 +1,10 @@
 import numpy as np
 import time
 
-base_filename = 'reformed_TF_train_mp_1_quarter'
+#base_filename = 'reformed_TF_train_mp_1_quarter'
 #base_filename = 'TF_train_update_TFR'
+
+base_filename = 'TF_train_waveform_TFR'
 dataset_size = 100000
 TFR_filesize = 10000
 
