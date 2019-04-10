@@ -192,10 +192,9 @@ def CNNmodel(features, labels, mode, params):
     net = tf.layers.flatten(net)
 
     norm_mag = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
-    #mag = net[:, 0:100] / norm_mag
-    mag = net[:, 0:100]
-    norm_phase = tf.reduce_max(tf.abs(net[:, 100:200]), axis=1, keepdims=True)
-    phase = np.pi * tf.abs(net[:, 100:200])
+    mag = net[:, 0:100] / norm_mag
+    #norm_phase = tf.reduce_max(tf.abs(net[:, 100:200]), axis=1, keepdims=True)
+    phase = 60 * np.pi * net[:, 100:200]
     output = tf.concat((mag, phase), axis=1)
 
     # norm = tf.reduce_max(tf.sqrt(net[:, 0:100] ** 2 + net[:, 100:200] ** 2), axis=1, keepdims=True)
@@ -214,9 +213,7 @@ def CNNmodel(features, labels, mode, params):
 
         return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
-    labels = tf.concat((tf.cast(labels, dtype=tf.float32)[:, 0:100],
-                        tf.abs(tf.cast(labels, dtype=tf.float32)[:, 100:200])),
-                       axis=1)
+    labels = tf.cast(labels, dtype=tf.float32)
     loss = tf.losses.mean_squared_error(labels=labels, predictions=output)
     accuracy = tf.metrics.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
 
