@@ -28,12 +28,29 @@ def TFR_map_func(sequence_example):
     )
     return data[1]['spectra'], data[0]['VN_coeff']
 
+def TFR_map_func_pulse(sequence_example):
+    '''
+    This map function returns the data in (input,label) pairs. A new dataset is created
+
+    :param sequence_example:
+    :return:
+    '''
+    context_features = {'Pulse_truth': tf.FixedLenFeature(shape=(200), dtype=tf.float32)}
+    sequence_features = {'spectra': tf.FixedLenSequenceFeature(shape=(100), dtype=tf.float32)}
+    data = tf.parse_single_sequence_example(
+        sequence_example,
+        context_features=context_features,
+        sequence_features=sequence_features
+    )
+    return data[1]['spectra'], data[0]['Pulse_truth']
+
 
 def input_TFR_functor(TFRecords_file_list=[], long=100000, repeat=1, batch_size=64):
     filenames = tf.data.Dataset.from_tensor_slices(TFRecords_file_list)
     dataset = tf.data.TFRecordDataset(filenames)
 
-    dataset = dataset.map(TFR_map_func)
+    #dataset = dataset.map(TFR_map_func)
+    dataset = dataset.map(TFR_map_func_pulse)
 
     dataset = dataset.shuffle(long).repeat(count=repeat).batch(batch_size=batch_size)
     return dataset.make_one_shot_iterator().get_next()
@@ -192,7 +209,7 @@ def CNNmodel(features, labels, mode, params):
     net = tf.layers.flatten(net)
 
     norm_mag = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
-    mag = net[:, 0:100] / norm_mag
+    mag = net[:, 0:100]
     #norm_phase = tf.reduce_max(tf.abs(net[:, 100:200]), axis=1, keepdims=True)
     phase = 60 * np.pi * net[:, 100:200]
     output = tf.concat((mag, phase), axis=1)
@@ -225,7 +242,7 @@ def CNNmodel(features, labels, mode, params):
     ######## Train mode
 
     # optimizer = tf.train.AdagradOptimizer(learning_rate=.01)
-    optimizer = tf.train.AdadeltaOptimizer(learning_rate=.01)
+    optimizer = tf.train.AdadeltaOptimizer(learning_rate=.1)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     if mode == tf.estimator.ModeKeys.TRAIN:
