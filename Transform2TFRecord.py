@@ -215,7 +215,7 @@ def reformat_2_TFRecord_pulse(transfer='dummy.hdf5', TFRecord='test_TFRecord', e
 
                 spectral = Spectra16[event, ...]
                 Pulse_truth_select = Pulse_truth[event, ...]
-                pulse_truth = np.concatenate((Pulse_truth_select[0], Pulse_truth_select[1]), axis=0)
+                pulse_truth = np.concatenate((Pulse_truth_select[0, :], Pulse_truth_select[1, :]), axis=0)
 
                 cookies = []
                 for spec in spectral:

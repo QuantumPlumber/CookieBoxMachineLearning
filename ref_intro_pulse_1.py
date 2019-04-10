@@ -7,8 +7,8 @@ print(h5_file.keys())
 for key in list(h5_file.keys()):
     print('shape of {} is {}'.format(key, h5_file[key].shape))
 
-select = np.sort(np.random.random_integers(0, 10000, 5))
-select = np.arange(5)
+select = np.sort(np.random.random_integers(0, 100, 5))
+#select = np.arange(5)
 pulse = h5_file['Pulse_truth'][select, :, :]
 
 h5_file.close()
