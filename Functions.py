@@ -28,6 +28,7 @@ def TFR_map_func(sequence_example):
     )
     return data[1]['spectra'], data[0]['VN_coeff']
 
+
 def TFR_map_func_pulse(sequence_example):
     '''
     This map function returns the data in (input,label) pairs. A new dataset is created
@@ -49,7 +50,7 @@ def input_TFR_functor(TFRecords_file_list=[], long=100000, repeat=1, batch_size=
     filenames = tf.data.Dataset.from_tensor_slices(TFRecords_file_list)
     dataset = tf.data.TFRecordDataset(filenames)
 
-    #dataset = dataset.map(TFR_map_func)
+    # dataset = dataset.map(TFR_map_func)
     dataset = dataset.map(TFR_map_func_pulse)
 
     dataset = dataset.shuffle(long).repeat(count=repeat).batch(batch_size=batch_size)
@@ -139,6 +140,45 @@ def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(3000, 3
 
     Spectra16_select = Spectra16[select, ...]
 
+    # randomizer = np.random.random_integers(low=0,high=Spectra16_select.shape[0]-1,size=Spectra16_select.shape[0])
+
+    # Spectra16_select = Spectra16_select + Spectra16_select[randomizer]
+
+    # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
+
+    dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select))
+    dataset = dataset.batch(batch_size)
+
+    h5_reformed.close()
+    return dataset.make_one_shot_iterator().get_next()
+    # return dataset
+
+
+def predict_hdf5_functor_scramble(transfer='reformed_spectra_final.hdf5', select=(3000, 3001), shuffle=((0), (1)),
+                                  batch_size=1):
+    h5_reformed = h5py.File(transfer, 'r')
+
+    if 'Spectra16' not in h5_reformed:
+        raise Exception('No "Spectra16" in file.')
+    else:
+        Spectra16 = h5_reformed['Spectra16']
+
+    if 'VN_coeff' not in h5_reformed:
+        raise Exception('No "VN_coeff" in file.')
+    else:
+        VN_coeff = h5_reformed['VN_coeff']
+
+    # Spectra16_select = Spectra16[select[0]:select[1], ...]
+    # VN_coeff_select = VN_coeff[select[0]:select[1], ...]
+
+    Spectra16_select = Spectra16[select, ...]
+
+    # randomizer = np.random.random_integers(low=0,high=Spectra16_select.shape[0]-1,size=Spectra16_select.shape[0])
+    for shuff in shuffle:
+        Spectra16_select = Spectra16_select + Spectra16_select[shuff, ...]
+
+    Spectra16_select = Spectra16_select/shuffle.shape[0]
+
     # VN_coeff_select_expand = np.concatenate((VN_coeff_select.real, VN_coeff_select.imag), axis=1)
 
     dataset = tf.data.Dataset.from_tensor_slices((Spectra16_select))
@@ -210,9 +250,11 @@ def CNNmodel(features, labels, mode, params):
 
     norm_mag = tf.reduce_max(tf.abs(net[:, 0:100]), axis=1, keepdims=True)
     mag = net[:, 0:100]
-    #norm_phase = tf.reduce_max(tf.abs(net[:, 100:200]), axis=1, keepdims=True)
-    phase = 60 * np.pi * net[:, 100:200]
-    output = tf.concat((mag, phase), axis=1)
+    # norm_phase = tf.reduce_max(tf.abs(net[:, 100:200]), axis=1, keepdims=True)
+    phase_scale_factor = 600 * np.pi  # sized to capture accumulated phase. Scales the magnitude to even error.
+    phase = phase_scale_factor * net[:, 100:200]
+    output = tf.concat((phase_scale_factor * mag, phase), axis=1)
+    predict = tf.concat((mag, phase), axis=1)
 
     # norm = tf.reduce_max(tf.sqrt(net[:, 0:100] ** 2 + net[:, 100:200] ** 2), axis=1, keepdims=True)
     # net = net / norm  # normalize explicitly
@@ -224,13 +266,22 @@ def CNNmodel(features, labels, mode, params):
     if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = {
 
-            'output': output,
+            'output': predict,
 
         }
 
         return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
-    labels = tf.cast(labels, dtype=tf.float32)
+    # alter the input labels
+    mag_labels = tf.cast(labels, dtype=tf.float32)[:, 0:100]
+    phase_labels = tf.cast(labels, dtype=tf.float32)[:, 100:200]
+    # phase_reshape = tf.concat((tf.cast(labels, dtype=tf.float32)[:, 100:101],
+    #                          tf.cast(labels, dtype=tf.float32)[:, 101:200] - tf.cast(labels, dtype=tf.float32)[:,100:199]), axis=1)
+    # phase_labels = tf.cumsum(phase_reshape*mag_labels, axis=1)
+    labels = tf.concat(
+        (phase_scale_factor * mag_labels, phase_labels * mag_labels),
+        axis=1)
+
     loss = tf.losses.mean_squared_error(labels=labels, predictions=output)
     accuracy = tf.metrics.mean_squared_error(labels=tf.cast(labels, dtype=tf.float32), predictions=output)
 
@@ -242,7 +293,7 @@ def CNNmodel(features, labels, mode, params):
     ######## Train mode
 
     # optimizer = tf.train.AdagradOptimizer(learning_rate=.01)
-    optimizer = tf.train.AdadeltaOptimizer(learning_rate=.1)
+    optimizer = tf.train.AdadeltaOptimizer(learning_rate=.01)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -300,7 +351,7 @@ def CNNmodelMagPhase(features, labels, mode, params):
 
     ######## Train mode
 
-    optimizer = tf.train.AdagradOptimizer(learning_rate=.01)
+    optimizer = tf.train.AdagradOptimizer(learning_rate=1.1)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     if mode == tf.estimator.ModeKeys.TRAIN:

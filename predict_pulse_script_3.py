@@ -21,11 +21,11 @@ for key in list(h5_reformed.keys()):
 cut_bot = 0000
 cut_top = 100000
 
-cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=6))
+cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=1))
 print(cut)
 ground_truther = Pulse_truth[cut, ...]
-mag_truth = ground_truther[:, 0, :]
-phase_truth = ground_truther[:, 1, :]
+mag_truth = ground_truther[:, 0, :][0]
+phase_truth = ground_truther[:, 1, :][0]
 
 h5_reformed.close()
 
@@ -34,18 +34,15 @@ predictions = classifier.predict(
                                              select=cut,
                                              batch_size=1))
 
-fig, ax = plt.subplots(nrows=int(ground_truther.shape[0] / 3), ncols=int(2 * 3),
-                       figsize=(22, int(ground_truther.shape[0] / 3) * 3))
-grid = np.indices(dimensions=(int(ground_truther.shape[0] / 3), 3))
-row = grid[0].flatten()
-col = grid[1].flatten() * 2
-index = np.arange(ground_truther.shape[0])
-for ind, ro, co, predict in zip(index, row, col, predictions):
+fig, ax = plt.subplots(nrows=int(2), ncols=int(1),
+                       figsize=(22, 44))
+grid = np.indices(dimensions=(2, 1))
+for predict in predictions:
     mag_pred = predict['output'][0:100]
     phase_pred = predict['output'][100:200]
-    ax[ro, co].plot(mag_truth[ind], 'b', mag_pred, 'r')
-    ax[ro, co + 1].plot(phase_truth[ind], 'b', phase_pred, 'r')
-    print(np.sum(((mag_pred - mag_truth[ind]) ** 2 + (phase_pred - phase_truth[ind]) ** 2)) / 200.)
-    # display(fig)
+ax[0].plot(mag_truth, 'b', mag_pred, 'r')
+ax[1].plot(phase_truth, 'b', phase_pred, 'r')
+print(np.sum(((mag_pred - mag_truth) ** 2 + (phase_pred - phase_truth) ** 2)) / 200.)
+# display(fig)
 
-    # fig.savefig('Images/sampleWaveforms4.png', dpi= 700)
+# fig.savefig('Images/sampleWaveforms4.png', dpi= 700)

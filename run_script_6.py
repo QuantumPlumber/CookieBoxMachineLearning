@@ -20,7 +20,7 @@ classifier = tf.estimator.Estimator(
     model_fn=fn.CNNmodel,
     # model_dir='Model_large_sym',
     # model_dir='scaled_sym_model',
-    model_dir='CNN_evenly_scaled',
+    model_dir='CNN_wave',
     config=checkpointing_config,
     params={
 

@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 
-h5_file = h5py.File('reformed_spectra_densesapce_safe.hdf5', 'r')
+#h5_file = h5py.File('reformed_spectra_densesapce_safe.hdf5', 'r')
 #h5_file = h5py.File('reformed_TF_train_mp_1_quarter.hdf5', 'r')
 #h5_file = h5py.File('reformed_TF_train_widegate.hdf5', 'r')
-
+h5_file = h5py.File('TF_train_waveform_convert.hdf5', 'r')
 
 print(h5_file.keys())
 for key in list(h5_file.keys()):
