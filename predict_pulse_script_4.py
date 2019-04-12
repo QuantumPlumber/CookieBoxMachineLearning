@@ -6,7 +6,7 @@ import importlib
 
 importlib.reload(fn)
 
-transfer = 'TF_train_waveform_convert.hdf5'
+transfer = 'TF_train_wave_unwrapped.hdf5'
 
 h5_reformed = h5py.File(transfer, 'r')
 
@@ -25,7 +25,10 @@ cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=6))
 print(cut)
 ground_truther = Pulse_truth[cut, ...]
 mag_truth = ground_truther[:, 0, :]
-phase_truth = ground_truther[:, 1, :]
+phase_truth = ground_truther[:, 1, :]*ground_truther[:, 0, :]
+
+#ground_truther[:, 1, 1:] -= ground_truther[:, 1, :-1]
+#phase_truth = ground_truther*mag_truth
 
 h5_reformed.close()
 
