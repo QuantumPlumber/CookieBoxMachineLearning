@@ -5,8 +5,9 @@ import time
 #base_filename = 'TF_train_update_TFR'
 
 #base_filename = 'TF_train_waveform_TFR'
-base_filename = 'TF_train_wave_unwrapped_TFR'
-dataset_size = 100000
+#base_filename = 'TF_train_wave_unwrapped_TFR'
+base_filename = 'TF_train_wave_unwrapped_eggs_TFR'
+dataset_size = 60000
 TFR_filesize = 10000
 
 def file_chunker(start, stop, step, base_filename):

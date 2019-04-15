@@ -9,23 +9,18 @@ A function to combine training data pulses for testing
 
 '''
 
-
 importlib.reload(DH)
 
 if __name__ == '__main__':
     checkpoint_global = time.perf_counter()
 
-    filename = '../AttoStreakSimulations/TF_train_waveform.hdf5'
-    transfer = 'convert_evaluate_test.hdf5'
+    filename = 'TF_train_wave_unwrapped.hdf5'
+    transfer = 'TF_train_wave_unwrapped_eggs.hdf5'
 
-
-    DH.pulse_evaluate(filename=filename, transfer=transfer)
-
+    DH.pulse_evaluate(filename=filename, transfer=transfer, num_spectra=int(1e6))
 
     delta_t = checkpoint_global - time.perf_counter()
     print('Total Runtime was {}'.format(delta_t))
-
-
 
     h5_file = h5py.File(transfer, 'r')
     print(h5_file.keys())

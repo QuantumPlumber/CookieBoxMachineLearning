@@ -6,7 +6,8 @@ import importlib
 
 importlib.reload(fn)
 
-h5_file = h5py.File('TF_train_wave_unwrapped.hdf5', 'r')
+#h5_file = h5py.File('TF_train_wave_unwrapped.hdf5', 'r')
+h5_file = h5py.File('TF_train_wave_unwrapped_eggs.hdf5', 'r')
 
 if 'Pulse_truth' not in h5_file:
     raise Exception('No "Pulse_truth" in file.')

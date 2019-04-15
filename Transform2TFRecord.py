@@ -241,7 +241,7 @@ def reformat_2_TFRecord_pulse(transfer='dummy.hdf5', TFRecord='test_TFRecord', e
                     checkpoint = time.perf_counter()
 
         print('completed file {}'.format(j))
-        if j == 10000:
+        if j == 5:
             break
         j = j + 1
 
