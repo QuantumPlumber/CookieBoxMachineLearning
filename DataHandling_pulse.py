@@ -148,8 +148,8 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
         phase_diff = np.append(np.zeros(shape=(pulsepulse.shape[0], 1, 1)),
                                pulsepulse[:, 1:, 1:] - pulsepulse[:, 1:, :-1], axis=2)
         phase_diff[phase_diff < 0] = phase_diff[phase_diff < 0] + 2 * np.pi
-        cumulative_phase = np.concatenate((pulsepulse[:, 0:1, take_every_10],
-                                           np.cumsum(phase_diff * (pulsepulse[:, 0:1, :] + .0001), axis=2)[:, :, take_every_10]), axis=1)
+        cumulative_phase = np.concatenate(
+            (pulsepulse[:, 0:1, take_every_10], np.cumsum(phase_diff, axis=2)[:, :, take_every_10]), axis=1)
         pulsepulse_repeat = np.repeat(cumulative_phase, repeats=hits_shape[1], axis=0)
         Pulse_truth[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = pulsepulse_repeat
 
@@ -189,7 +189,8 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
 
 
 def pulse_evaluate(filename='../AttoStreakSimulations/TF_train_single.hdf5',
-                   transfer='reformed_spectra.hdf5'):
+                   transfer='reformed_spectra.hdf5',
+                   num_spectra=100000):
     '''
     Transforms the raw simulation data into detector data of a given precision
 
@@ -206,7 +207,7 @@ def pulse_evaluate(filename='../AttoStreakSimulations/TF_train_single.hdf5',
     else:
         raise Exception('No "Hits" in file.')
 
-    if 'Spectra' in h5file:
+    if 'Spectra16' in h5file:
         Spectra16 = h5file['Spectra16']
     else:
         raise Exception('No "Spectra16" in file.')
@@ -228,84 +229,67 @@ def pulse_evaluate(filename='../AttoStreakSimulations/TF_train_single.hdf5',
     chunksize = mp.cpu_count()
 
     if 'Spectra16' not in h5_reformed:
-        detectors_ref = h5_reformed.create_dataset(name='Spectra16', compression='gzip', shape=Spectra16.shape.tolist(),
+        detectors_ref = h5_reformed.create_dataset(name='Spectra16',
+                                                   compression='gzip',
+                                                   shape=(num_spectra, Spectra16.shape[1], Spectra16.shape[2]),
                                                    chunks=(chunksize, Spectra16.shape[1], Spectra16.shape[2]))
     else:
         detectors_ref = h5_reformed['Spectra16']
 
     if 'Pulse_truth' not in h5_reformed:
-        Pulse_truth_ref = h5_reformed.create_dataset(name='Pulse_truth', shape=Pulse_truth.shape.tolist(), compression='gzip',
-                                                 chunks=(chunksize, Pulse_truth.shape[1], Pulse_truth.shape[2]))
+        Pulse_truth_ref = h5_reformed.create_dataset(name='Pulse_truth',
+                                                     shape=(num_spectra, Pulse_truth.shape[1], Pulse_truth.shape[2]),
+                                                     compression='gzip',
+                                                     chunks=(chunksize, Pulse_truth.shape[1], Pulse_truth.shape[2]))
     else:
         Pulse_truth_ref = h5_reformed['Pulse_truth']
 
+    def data_generator(Spectra, pulse_truth, jump):
+        spectra_index = np.arange(Spectra.shape[0])
+        while True:
+            pulse_number = np.random.randint(1, 5, size=jump)
+            #pulse_number = np.repeat(2, repeats=jump)
+            pulses = []
+            for num in pulse_number:
+                pulses.append(np.sort(np.random.choice(spectra_index, size=num, replace=False), axis=0))
+            # print(pulses)
+            spectra_out_list = []
+            pulse_truth_out_list = []
+            for num, group in zip(pulse_number, pulses):
+                # print(Spectra[group.tolist(), ...].shape)
+                spectra_out_list.append(np.sum(Spectra[group.tolist(), ...], axis=0) / float(num))
+                pulse_truth_out_list.append(np.sum(pulse_truth[group.tolist(), ...], axis=0) / float(num))
 
-    num_spectra = np.arange(0, spectra_shape[0], step=100)
-    num_spectra_top = np.append(num_spectra, np.array(spectra_shape[0]) - 1)[1:]
-    bot_top = np.column_stack((num_spectra, num_spectra_top)).astype('int')
+            yield [np.stack(spectra_out_list, axis=0), np.stack(pulse_truth_out_list, axis=0)]
 
-    def data_generator(Hits, Spectra, VN_coeff, jump):
-        take_every_10 = np.arange(start=0, stop=1000, step=10)
-        for i in np.arange(0, spectra_shape[0], step=jump):
-            yield Hits[i:i + jump, :, :], Spectra[i:i + jump, :, :, 1, 0:350], Time_pulse[i:i + jump, (0, 2), :][:, :,
-                                                                               take_every_10], VN_coeff[i:i + jump, :,
-                                                                                               :], [i, i + jump]
+    sim_data = data_generator(Spectra=Spectra16, pulse_truth=Pulse_truth, jump=chunksize)
 
-    sim_data = data_generator(Hits=Hits, Spectra=Spectra, VN_coeff=VN_coeff, jump=chunksize)
+    def chunk_maker(Spectra, jump):
+        for i in np.arange(0, Spectra.shape[0], step=jump):
+            yield [i, i + jump]
 
-    # Create Pool
-    processes = chunksize
-    pool = mp.Pool(processes)
-    print('Pooled {} threads for parallel computation'.format(processes))
+    chunks = chunk_maker(Spectra=detectors_ref, jump=chunksize)
 
     # checkpoint_global = time.process_time()
     break_number = 0
     # Encapsulate memory heavy things in the slicer function so python is forced to free memory
-    for hh, ss, pulsepulse, vnvn, b_slice in sim_data:
-        checkpoint = time.perf_counter()
+    for chunk, pulsepulsetrutru in zip(chunks, sim_data):
 
-        # reshape and record hits
-        local_hits_shape = np.array(hh.shape)
-        local_hits_reshape = np.array((local_hits_shape[0] * local_hits_shape[1], local_hits_shape[2]))
-        reshaped_hits = np.reshape(hh, newshape=local_hits_reshape)
-        hits_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :] = reshaped_hits
+        if break_number % 1001 == 0:
+            chunk_start = chunk[0]
+            checkpoint = time.perf_counter()
 
-        # fill in the vn coefficients, requires copying the array.
-        local_vn_shape = np.array(vnvn.shape)
-        local_vn_reshape = np.array([local_vn_shape[0], local_vn_shape[1] * local_vn_shape[2]])
-        vn_reshped = np.repeat(
-            np.reshape(vnvn, newshape=local_vn_reshape), repeats=hits_shape[1], axis=0)
-        vn_co_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :] = vn_reshped
+        detectors_ref[chunk[0]:chunk[1], ...] = pulsepulsetrutru[0]
+        Pulse_truth_ref[chunk[0]:chunk[1], ...] = pulsepulsetrutru[1]
 
-        # fill in the pulse_mag and pulse_phase, requires copying the array.
-        # local_pulse_shape = np.array(pulsepulse.shape)
-        pulsepulse_repeat = np.repeat(pulsepulse, repeats=hits_shape[1], axis=0)
-        Pulse_truth[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = pulsepulse_repeat
+        if break_number % 1000 == 0:
+            delta_t = checkpoint - time.perf_counter()
+            print('Scrambled {} waveforms in {}'.format(chunk[1] - chunk_start, delta_t))
 
-        # Create 16 detector lists, discards angle information.
-        workers = []
-        for spect in ss:
-            argslist = (energy_points, np.expand_dims(spect, axis=0))
-            # print(argslist[1].shape)
-            worker = pool.apply_async(gaussian_kernel_compute_mp, argslist)
-            workers.append(worker)
-
-        # transformed_spectra = gaussian_kernel_compute_mp(energy_points=energy_points, Spectra=ss)
-        transformed_spectra_list = []
-        for worker in workers:
-            transformed_spectra_list.append(worker.get())
-        # print(transformed_spectra_list[0].shape)
-        transformed_spectra = np.concatenate(transformed_spectra_list, axis=0)
-        # print(transformed_spectra.shape)
-        detectors_ref[(b_slice[0] * hits_shape[1]):(b_slice[1] * hits_shape[1]), :, :] = transformed_spectra
-
-        print('complete {} to {} of {}'.format(b_slice[0], b_slice[1], spectra_shape[0]))
-
-        delta_t = checkpoint - time.perf_counter()
-        print('Converted in {}'.format(delta_t))
-        if break_number == 1000000:
+        if break_number == int(1e6):
             break
         break_number += 1
+        # print(break_number)
 
     # delta_t = checkpoint_global - time.process_time()
     # print('Total Runtime was {}'.format(delta_t))

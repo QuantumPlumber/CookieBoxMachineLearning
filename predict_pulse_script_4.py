@@ -6,7 +6,8 @@ import importlib
 
 importlib.reload(fn)
 
-transfer = 'TF_train_wave_unwrapped.hdf5'
+#transfer = 'TF_train_wave_unwrapped.hdf5'
+transfer = 'TF_train_wave_unwrapped_eggs.hdf5'
 
 h5_reformed = h5py.File(transfer, 'r')
 

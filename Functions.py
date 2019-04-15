@@ -130,10 +130,10 @@ def predict_hdf5_functor(transfer='reformed_spectra_final.hdf5', select=(3000, 3
     else:
         Spectra16 = h5_reformed['Spectra16']
 
-    if 'VN_coeff' not in h5_reformed:
-        raise Exception('No "VN_coeff" in file.')
-    else:
-        VN_coeff = h5_reformed['VN_coeff']
+    #if 'VN_coeff' not in h5_reformed:
+    #    raise Exception('No "VN_coeff" in file.')
+    #else:
+    #    VN_coeff = h5_reformed['VN_coeff']
 
     # Spectra16_select = Spectra16[select[0]:select[1], ...]
     # VN_coeff_select = VN_coeff[select[0]:select[1], ...]
@@ -163,10 +163,10 @@ def predict_hdf5_functor_scramble(transfer='reformed_spectra_final.hdf5', select
     else:
         Spectra16 = h5_reformed['Spectra16']
 
-    if 'VN_coeff' not in h5_reformed:
-        raise Exception('No "VN_coeff" in file.')
-    else:
-        VN_coeff = h5_reformed['VN_coeff']
+    #if 'VN_coeff' not in h5_reformed:
+    #    raise Exception('No "VN_coeff" in file.')
+    #else:
+    #    VN_coeff = h5_reformed['VN_coeff']
 
     # Spectra16_select = Spectra16[select[0]:select[1], ...]
     # VN_coeff_select = VN_coeff[select[0]:select[1], ...]
