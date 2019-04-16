@@ -23,43 +23,41 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
     else:
         Pulse_truth = h5_reformed['Pulse_truth']
 
-    print(h5_reformed.keys())
-    for key in list(h5_reformed.keys()):
-        print('shape of {} is {}'.format(key, h5_reformed[key].shape))
-
-    random_shuffled_index = np.arange(0, Spectra16.shape[0])[cut_bot:cut_top]
+    random_shuffled_index = np.arange(0, Spectra16.shape[0])[
+                            int(Spectra16.shape[0] * cut_bot):int(Spectra16.shape[0] * cut_top)]
     np.random.shuffle(random_shuffled_index)
 
+    print((int(Spectra16.shape[0] * cut_bot),int(Spectra16.shape[0] * cut_top)))
+
     for batch in np.arange(start=0, stop=random_shuffled_index.shape[0], step=batch_size):
-        yield (Spectra16[batch:batch + batch_size, ...],
-               Pulse_truth[batch:batch + batch_size, 0, :],
-               Pulse_truth[batch:batch + batch_size, 1, :])
+        yield (Spectra16[np.sort(random_shuffled_index[batch: batch + batch_size]), ...],
+               {'magnitude': Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 0, :],
+                'magphase': Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 1, :]})
 
 
-train_data = data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.0, cut_top=.8)
-test_data = data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.8, cut_top=1.0)
 
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir='./tensorboard', histogram_freq=1, batch_size=64,
-                                                      write_graph=True, write_grads=False,
-                                                      write_images=False, embeddings_freq=0,
-                                                      embeddings_layer_names=None,
-                                                      embeddings_metadata=None, embeddings_data=None,
-                                                      update_freq='epoch')
+train_data = data_generator(transfer='../TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.0, cut_top=.8)
+test_data = data_generator(transfer='../TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.8, cut_top=1.0)
+
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir='./tensorboard',
+                                                      histogram_freq=1,
+                                                      batch_size=64,
+                                                      write_graph=True,
+                                                      write_grads=False,
+                                                      write_images=False)
 
 keras_model.fit_generator(train_data,
                           steps_per_epoch=int(1e3),
                           epochs=1,
                           verbose=1,
-                          callbacks=tensorboard_callback,
+                          callbacks=[tensorboard_callback],
                           validation_data=test_data,
-                          validation_steps=int(1e2),
-                          validation_freq=1,
+                          validation_steps=int(1e1),
                           class_weight=None,
                           max_queue_size=10,
                           workers=1,
                           use_multiprocessing=False,
-                          shuffle=True,
-                          initial_epoch=0)
+                          shuffle=True)
 '''
 keras_model.fit(x=None, y=None, batch_size=None, epochs=1, verbose=1, callbacks=None, validation_split=0.0,
                 validation_data=None,
