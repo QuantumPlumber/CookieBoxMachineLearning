@@ -31,17 +31,16 @@ for nodes in dense_network[:-1]:
     net = tf.keras.layers.Dense(units=nodes)(net)
 
 output = [100, 100]
-mag = tf.keras.layers.Dense(units=output[0])(net)
+mag = tf.keras.layers.Dense(units=output[0], name='magnitude')(net)
 phase_scale_factor = 600 * np.pi
-phase = tf.keras.layers.Dense(units=output[1])(net)
+phase = phase_scale_factor * tf.keras.layers.Dense(units=output[1])(net)
+phase_dot = tf.keras.layers.Multiply(name='magphase')([mag, phase])
 
-keras_model = tf.keras.Model(inputs=spectra16, outputs=[mag, phase])
+keras_model = tf.keras.Model(inputs=spectra16, outputs=[mag, phase_dot])
 
 adadelta = tf.keras.optimizers.Adadelta(lr=.01, rho=0.95, epsilon=1e-8, decay=0.0)
-keras_model.compile(optimizer=adadelta, loss='mean_squared_error', loss_weights=[phase_scale_factor, 1.])
+keras_model.compile(optimizer=adadelta,
+                    loss={'magnitude': 'mean_squared_error', 'magphase': 'mean_squared_error'},
+                    loss_weights=[phase_scale_factor, 1.])
 
 plot_model(keras_model, to_file='model.png')
-
-keras_model.fit(x=None, y=None, batch_size=None, epochs=1, verbose=1, callbacks=None, validation_split=0.0, validation_data=None,
-    shuffle=True, class_weight=None, sample_weight=None, initial_epoch=0, steps_per_epoch=None, validation_steps=None,
-    validation_freq=1)
