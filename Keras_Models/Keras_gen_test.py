@@ -32,8 +32,8 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
         print(batch)
         print(np.sort(random_shuffled_index[batch: batch + batch_size]))
         return (Spectra16[np.sort(random_shuffled_index[batch: batch + batch_size]), ...],
-               Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 0, :],
-               Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 1, :])
+                Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 0, :],
+                Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 1, :])
         break
 
 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 #h5_file = h5py.File('convert_test.hdf5', 'r')
 #h5_file = h5py.File('TF_train_wave_unwrapped.hdf5', 'r')
-h5_file = h5py.File('TF_train_wave_unwrapped_eggs.hdf5', 'r')
+h5_file = h5py.File('../Data/unwrapped/Eggs/TF_train_wave_unwrapped_eggs.hdf5', 'r')
 
 print(h5_file.keys())
 for key in list(h5_file.keys()):
