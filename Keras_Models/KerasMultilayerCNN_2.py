@@ -10,15 +10,15 @@ def slicer(inputs, i):
     # return tf.slice(inputs[0], begin=(0, inputs[1], 0, 0), size=(-1, 0, -1, -1))
     return (inputs[:, i, :, :])
 
+activation_string = None
 
 slicing = tf.keras.layers.Lambda(slicer)
-conv1 = tf.keras.layers.Conv1D(filters=11, kernel_size=5, padding='valid')  # no zero padding
+conv1 = tf.keras.layers.Conv1D(filters=10, kernel_size=5, padding='valid',activation=activation_string)  # no zero padding
 pool1 = tf.keras.layers.MaxPooling1D(pool_size=5, strides=2)
-conv2 = tf.keras.layers.Conv1D(filters=21, kernel_size=5, padding='valid')  # no zero padding
+conv2 = tf.keras.layers.Conv1D(filters=10, kernel_size=5, padding='valid',activation=activation_string)  # no zero padding
 pool2 = tf.keras.layers.MaxPooling1D(pool_size=5, strides=2)
-conv3 = tf.keras.layers.Conv1D(filters=31, kernel_size=5, padding='valid')  # no zero padding
-#pool3 = tf.keras.layers.MaxPooling1D(pool_size=45, strides=1)
-pool3 = tf.keras.layers.MaxPooling1D(pool_size=5, strides=2)
+conv3 = tf.keras.layers.Conv1D(filters=10, kernel_size=5, padding='valid',activation=activation_string)  # no zero padding
+pool3 = tf.keras.layers.MaxPooling1D(pool_size=5, strides=1)
 spectra16_conv_list = []
 
 for spect in range(16):
@@ -35,22 +35,32 @@ for spect in range(16):
 net = tf.keras.layers.Concatenate()(spectra16_conv_list)
 net = tf.keras.layers.Flatten()(net)
 
-dense_network = [960, 960, 500]
-for nodes in dense_network[:-1]:
-    net = tf.keras.layers.Dense(units=nodes)(net)
+net_linear = tf.keras.layers.Dense(units=1760, activation=None)(net)
+net_nonlinear = tf.keras.layers.Dense(units=1760, activation='tanh')(net)
+net = tf.keras.layers.Multiply()([net_linear, net_nonlinear])
+
+dense_network = [500]
+for nodes in dense_network:
+    net_linear = tf.keras.layers.Dense(units=nodes, activation=None)(net)
+    net_nonlinear = tf.keras.layers.Dense(units=nodes, activation='tanh')(net)
+    net = tf.keras.layers.Multiply()([net_linear, net_nonlinear])
 
 output = [100, 100]
-mag = tf.keras.layers.Dense(units=output[0], name='magnitude')(net)
-phase_scale_factor = 1200 * np.pi
-phase = tf.keras.layers.Lambda(lambda x: x*phase_scale_factor)(tf.keras.layers.Dense(units=output[1])(net))
-phase_dot = tf.keras.layers.Multiply(name='magphase')([mag, phase])
+mag_scale_factor = 100
+phase_scale_factor = 30 * np.pi
 
-keras_model = tf.keras.Model(inputs=spectra16, outputs=[mag, phase_dot])
+mag = tf.keras.layers.Lambda(lambda x: x * phase_scale_factor, name='magnitude')(
+    tf.keras.layers.Dense(units=output[0], activation=None)(net))
+phase = tf.keras.layers.Lambda(lambda x: x * phase_scale_factor, name='phase')(
+    tf.keras.layers.Dense(units=output[1], activation=None)(net))
 
-adadelta = tf.keras.optimizers.Adadelta(lr=.01, rho=0.95, epsilon=1e-8, decay=0.0)
-keras_model.compile(optimizer=adadelta,
-                    loss={'magnitude': 'mean_squared_error', 'magphase': 'mean_squared_error'},
-                    loss_weights=[phase_scale_factor**2, 1.])
+keras_model = tf.keras.Model(inputs=spectra16, outputs=[mag, phase])
+
+RMSprop = tf.keras.optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
+#Adadelta = tf.keras.optimizers.Adadelta(lr=.01, rho=0.95, epsilon=1e-8, decay=0.0)
+keras_model.compile(optimizer=RMSprop,
+                    loss={'magnitude': 'mean_squared_error', 'phase': 'mean_squared_error'},
+                    loss_weights=[1., 1.])
 
 
 direct = './multilayer_cnn_2'

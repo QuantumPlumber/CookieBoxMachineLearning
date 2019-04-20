@@ -145,9 +145,11 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
         # fill in the pulse_mag and pulse_phase, requires copying the array.
         # local_pulse_shape = np.array(pulsepulse.shape)
         take_every_10 = np.arange(start=0, stop=1000, step=10)
+
         phase_diff = np.append(np.zeros(shape=(pulsepulse.shape[0], 1, 1)),
                                pulsepulse[:, 1:, 1:] - pulsepulse[:, 1:, :-1], axis=2)
         phase_diff[phase_diff < 0] = phase_diff[phase_diff < 0] + 2 * np.pi
+        phase_diff = phase_diff*pulsepulse[:, 0:1, :] #this produces a step function
         cumulative_phase = np.concatenate(
             (pulsepulse[:, 0:1, take_every_10], np.cumsum(phase_diff, axis=2)[:, :, take_every_10]), axis=1)
         pulsepulse_repeat = np.repeat(cumulative_phase, repeats=hits_shape[1], axis=0)
@@ -286,7 +288,7 @@ def pulse_evaluate(filename='../AttoStreakSimulations/TF_train_single.hdf5',
             delta_t = checkpoint - time.perf_counter()
             print('Scrambled {} waveforms in {}'.format(chunk[1] - chunk_start, delta_t))
 
-        if break_number == int(1e6):
+        if break_number == num_spectra:
             break
         break_number += 1
         # print(break_number)

@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 
 mag_scale_factor = 100
-phase_scale_factor = 1200 * np.pi
+phase_scale_factor = 30 * np.pi
 
 
 def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.8, cut_top=1., reps=20):
@@ -38,10 +38,9 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
     for batch in np.arange(start=0, stop=random_shuffled_index.shape[0], step=batch_size):
         magnitude = phase_scale_factor * Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 0, :]
         phase = Pulse_truth[np.sort(random_shuffled_index[batch: batch + batch_size]), 1, :]
-        magphase = magnitude / phase_scale_factor * phase
         yield (Spectra16[np.sort(random_shuffled_index[batch: batch + batch_size]), ...],
                {'magnitude': magnitude,
-                'phase': magphase})
+                'phase': phase})
 
 
 #transfer_filename = '../Data/unwrapped/Eggs/TF_train_wave_unwrapped_eggs.hdf5'
