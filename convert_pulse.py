@@ -9,8 +9,14 @@ importlib.reload(DH)
 if __name__ == '__main__':
     checkpoint_global = time.perf_counter()
 
-    filename = '../AttoStreakSimulations/TF_train_waveform.hdf5'
-    transfer = 'convert_test.hdf5'
+    #filename = '../AttoStreakSimulations/TF_train_waveform.hdf5'
+    #transfer = 'Data/unwrapped_step/convert_test.hdf5'
+
+    #filename = '../AttoStreakSimulations/TF_train_25hits.hdf5'
+    #transfer = 'Data/25Hit_unwrapped/convert_test.hdf5'
+
+    filename = '../AttoStreakSimulations/TF_train_25hits.hdf5'
+    transfer = 'Data/25Hit_unwrapped/step/convert_test.hdf5'
 
     DH.transform_2_spectra_from_mp(filename=filename, transfer=transfer)
 

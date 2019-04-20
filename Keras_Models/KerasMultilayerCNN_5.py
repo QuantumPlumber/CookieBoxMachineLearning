@@ -39,7 +39,6 @@ for nodes in dense_network[:-1]:
     net = tf.keras.layers.Dense(units=nodes)(net)
 
 output = [100, 100]
-
 mag_scale_factor = 100
 phase_scale_factor = 1200 * np.pi
 

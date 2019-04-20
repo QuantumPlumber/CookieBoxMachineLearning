@@ -6,13 +6,14 @@ import importlib
 import os
 
 mag_scale_factor = 100
-phase_scale_factor = 1200 * np.pi
+phase_scale_factor = 30 * np.pi
 
 # load data
 
 #transfer = '../Data/unwrapped/Eggs/TF_train_wave_unwrapped_eggs.hdf5'
 #transfer = '../Data/25Hit_unwrapped/Scrambled/TF_train_25Hits_eggs.hdf5'
-transfer = '../Data/unwrapped_step/TF_train_waveform_unwrapped_step_eggs.hdf5'
+#transfer = '../Data/unwrapped_step/TF_train_waveform_unwrapped_step_eggs.hdf5'
+transfer = '../Data/25Hit_unwrapped/Scrambled/TF_train_25Hits_step_eggs.hdf5'
 h5_reformed = h5py.File(transfer, 'r')
 
 if 'Spectra16' not in h5_reformed:
@@ -31,8 +32,6 @@ for key in list(h5_reformed.keys()):
 # load model
 direct = './multilayer_cnn_2'
 filename = direct + '/' + 'saved_model.h5'
-mag_scale_factor = 100
-phase_scale_factor = 1200 * np.pi
 try:
     keras_model
 except NameError:
@@ -51,10 +50,10 @@ num_spectra = 10
 
 cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=num_spectra))
 print(cut)
-spectra = Spectra16[cut, ...]
+spectra = Spectra16[cut, ...]*4
 ground_truther = Pulse_truth[cut, ...]
 mag_truth = ground_truther[:, 0, :]
-phase_truth = ground_truther[:, 1, :] * mag_truth
+phase_truth = ground_truther[:, 1, :]
 mag_truth = mag_truth * phase_scale_factor
 
 # ground_truther[:, 1, 1:] -= ground_truther[:, 1, :-1]
@@ -79,9 +78,9 @@ for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], pr
         mag_truth[ind] + phase_truth[ind])
     print('mse err0r = {}, abs error = {}'.format(mse_error, abs_diff))
     # display(fig)
-    #np.savetxt('{}hit_mag_truth{}.txt'.format(num_hits, ind), mag_truth[ind])
-    #np.savetxt('{}phase_truth{}.txt'.format(num_hits, ind), phase_truth[ind])
-    #np.savetxt('{}mag_pred{}.txt'.format(num_hits, ind), mag_pred)
-    #np.savetxt('{}phase_pred{}.txt'.format(num_hits, ind), phase_pred)
+    np.savetxt('{}hit_mag_truth{}.txt'.format(num_hits, ind), mag_truth[ind])
+    np.savetxt('{}phase_truth{}.txt'.format(num_hits, ind), phase_truth[ind])
+    np.savetxt('{}mag_pred{}.txt'.format(num_hits, ind), mag_pred)
+    np.savetxt('{}phase_pred{}.txt'.format(num_hits, ind), phase_pred)
 
     # fig.savefig('Images/sampleWaveforms4.png', dpi= 700)
