@@ -112,7 +112,7 @@ def transform_2_spectra_from_mp(filename='../AttoStreakSimulations/TF_train_sing
 
     def data_generator(Hits, Spectra, VN_coeff, jump):
         for i in np.arange(0, spectra_shape[0], step=jump):
-            yield Hits[i:i + jump, :, :], Spectra[i:i + jump, :, :, 1, 0:350], Time_pulse[i:i + jump, (0, 1),
+            yield Hits[i:i + jump, :, :], Spectra[i:i + jump, :, :, 1, 0:100], Time_pulse[i:i + jump, (0, 1),
                                                                                :], VN_coeff[i:i + jump, :, :], [i,
                                                                                                                 i + jump]
 

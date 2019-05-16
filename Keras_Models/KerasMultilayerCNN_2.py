@@ -63,7 +63,8 @@ keras_model.compile(optimizer=RMSprop,
                     loss_weights=[1., 1.])
 
 
-direct = './multilayer_cnn_2'
+#direct = './multilayer_cnn_2'
+direct = './multilayer_cnn_400Hit_multipulse'
 filename = direct+'/'+'model.png'
 plot_model(keras_model, to_file=filename, show_shapes=True)
 
