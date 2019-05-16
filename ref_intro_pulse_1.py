@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 #h5_file = h5py.File('TF_train_wave_unwrapped.hdf5', 'r')
 #h5_file = h5py.File('../Data/unwrapped/Eggs/TF_train_wave_unwrapped_eggs.hdf5', 'r')
 #h5_file = h5py.File('/Data/25Hit_unwrapped/Scrambled/TF_train_25Hits_eggs.hdf5', 'r')
-h5_file = h5py.File('Data/unwrapped_step/TF_train_waveform_unwrapped_step.hdf5', 'r')
+#h5_file = h5py.File('Data/unwrapped_step/TF_train_waveform_unwrapped_step.hdf5', 'r')
+h5_file = h5py.File('Data/25_hit_5-14-19/25_hit_5-14-19_convert.hdf5', 'r')
 
 
 print(h5_file.keys())
@@ -16,7 +17,7 @@ for key in list(h5_file.keys()):
 select = np.sort(np.random.random_integers(0, 100000, 10))
 print(select)
 # select = np.arange(5)
-pulse_pure = h5_file['Pulse_truth'][select, :, :]
+pulse_pure = h5_file['Pulse_truth'][select, 0:10, :]
 
 h5_file.close()
 

@@ -15,8 +15,15 @@ if __name__ == '__main__':
     #filename = '../AttoStreakSimulations/TF_train_25hits.hdf5'
     #transfer = 'Data/25Hit_unwrapped/convert_test.hdf5'
 
-    filename = '../AttoStreakSimulations/TF_train_25hits.hdf5'
-    transfer = 'Data/25Hit_unwrapped/step/convert_test.hdf5'
+    #filename = '../AttoStreakSimulations/TF_train_25hits.hdf5'
+    #transfer = 'Data/25Hit_unwrapped/step/convert_test.hdf5'
+
+    #filename = '../AttoStreakSimulations/Data/TF_25hit_0-6pulse.hdf5'
+    #transfer = 'Data/25_hit_5-14-19/convert_test.hdf5'
+
+    filename = '../AttoStreakSimulations/Data/TF_300hit_0-6pulse.hdf5'
+    transfer = 'Data/25_hit_5-14-19/TF_300hit_0-6pulse_convert.hdf5'
+
 
     DH.transform_2_spectra_from_mp(filename=filename, transfer=transfer)
 

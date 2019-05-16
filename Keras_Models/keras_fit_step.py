@@ -8,7 +8,7 @@ mag_scale_factor = 100
 phase_scale_factor = 30 * np.pi
 
 
-def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.8, cut_top=1., reps=20):
+def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, cut_bot=.8, cut_top=1., reps=60):
     '''
         Reformats transformed simulation data into TFRecord data format
 
@@ -44,20 +44,24 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
 
 
 #transfer_filename = '../Data/unwrapped/Eggs/TF_train_wave_unwrapped_eggs.hdf5'
+#transfer_filename = '../Data/unwrapped_step/TF_train_waveform_unwrapped_step_eggs.hdf5'
+#transfer_filename = '../Data/25_hit_5-14-19/25_hit_5-14-19_convert.hdf5'
+#transfer_filename = '../Data/25_hit_5-14-19/large_kernel.hdf5'
+transfer_filename = '../Data/25_hit_5-14-19/TF_100hit_0-6pulse_convert.hdf5'
 
-transfer_filename = '../Data/unwrapped_step/TF_train_waveform_unwrapped_step_eggs.hdf5'
 train_data = data_generator(transfer=transfer_filename,
                             batch_size=64,
-                            cut_bot=.0,
-                            cut_top=.8)
+                            cut_bot=.0/7,
+                            cut_top=.8/7)
 test_data = data_generator(transfer=transfer_filename,
                            batch_size=64,
-                           cut_bot=.8,
-                           cut_top=1.0)
+                           cut_bot=.8/7,
+                           cut_top=1.0/7)
 
 # direct = './multilayer_cnn'
 # direct = './multilayer_cnn_big'
-direct = './multilayer_cnn_2'
+# direct = './multilayer_cnn_2'
+direct = './multilayer_cnn_400Hit_multipulse'
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=direct,
                                                       histogram_freq=1,
                                                       batch_size=64,
