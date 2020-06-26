@@ -5,14 +5,8 @@ import h5py
 import importlib
 import os
 
-mag_scale_factor = 1
-phase_scale_factor = 1
-
 # load data
 
-# transfer = '../../AttoStreakSimulations/Data/TF_workout_truth.hdf5'
-# transfer = '../../AttoStreakSimulations/Data/TF_DokasHouse_truth.hdf5'
-#transfer = '../../AttoStreakSimulations/Data/TF_SinglePulse_truth.hdf5'
 transfer = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
 
 h5_reformed = h5py.File(transfer, 'r')
@@ -22,10 +16,10 @@ if 'Spectra' not in h5_reformed:
 else:
     Spectra = h5_reformed['Spectra']
 
-if 'Nonlinearphase_pulse' not in h5_reformed:
+if 'Phase_pulse' not in h5_reformed:
     raise Exception('No "Phase_pulse" in file.')
 else:
-    Nonlinearphase_pulse = h5_reformed['Nonlinearphase_pulse']
+    Phase_pulse = h5_reformed['Phase_pulse']
 
 if 'Time_pulse' not in h5_reformed:
     raise Exception('No "Time_pulse" in file.')
@@ -50,8 +44,8 @@ except NameError:
 else:
     print('keras_model already instantiated')
 
-cut_bot = int(Time_pulse.shape[0] * 0.8)
-cut_top = int(Time_pulse.shape[0] * 1.0)
+cut_bot = int(Time_pulse.shape[0] * 0.)
+cut_top = int(Time_pulse.shape[0] * .8)
 num_spectra = 30
 
 cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=num_spectra))
@@ -60,9 +54,11 @@ spectra_true = Spectra[cut, ...]
 spectra = spectra_true[:, :, :, 0] ** 2 + spectra_true[:, :, :, 1] ** 2
 true_sum = np.sum(spectra)
 spectra = spectra*1e9
-mag_truth = Time_pulse[cut, ...] * mag_scale_factor
-phase_truth = Nonlinearphase_pulse[cut, ...]
-
+magnitude = Time_pulse[cut, ...]
+phase = Phase_pulse[cut, ...]
+complex_waveform = magnitude * np.exp(1j * phase)
+mag_truth = np.real(complex_waveform)
+phase_truth = np.imag(complex_waveform)
 
 # ground_truther[:, 1, 1:] -= ground_truther[:, 1, :-1]
 # phase_truth = ground_truther*mag_truth
@@ -79,7 +75,6 @@ col = grid[1].flatten() * 2
 index = np.arange(mag_truth.shape[0])
 num_hits = 400
 for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], predictions[1]):
-#for ind, ro, co, phase_pred in zip(index, row, col, predictions):
     ax[ro, co].plot(mag_truth[ind], 'b', mag_pred, 'r')
     ax[ro, co + 1].plot(phase_truth[ind], 'b', phase_pred, 'r')
     mse_error = np.sum(((mag_pred - mag_truth[ind]) ** 2 + (phase_pred - phase_truth[ind]) ** 2)) / 200.

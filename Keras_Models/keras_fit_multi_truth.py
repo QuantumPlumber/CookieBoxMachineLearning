@@ -28,27 +28,41 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
     else:
         Nonlinearphase_pulse = h5_reformed['Nonlinearphase_pulse']
 
-
     if 'Time_pulse' not in h5_reformed:
         raise Exception('No "Time_pulse" in file.')
     else:
         Time_pulse = h5_reformed['Time_pulse']
 
-    random_shuffled_index = np.arange(0, Spectra.shape[0])[
-                            int(Spectra.shape[0] * cut_bot):int(Spectra.shape[0] * cut_top)]
-    np.random.shuffle(random_shuffled_index)
-    random_shuffled_index = np.tile(random_shuffled_index, reps=reps)
+    spectra_index = np.arange(0, Spectra.shape[0])[int(Spectra.shape[0] * cut_bot):int(Spectra.shape[0] * cut_top)]
+    seed_size = 1000
+    seed_index = np.arange(0, seed_size)
 
     print((int(Spectra.shape[0] * cut_bot), int(Spectra.shape[0] * cut_top)))
 
-    for batch in np.arange(start=0, stop=random_shuffled_index.shape[0], step=batch_size):
-        sort_index = np.sort(np.unique(random_shuffled_index[batch: batch + batch_size]))
-        magnitude = mag_scale_factor * Time_pulse[sort_index, :]
-        phase = Nonlinearphase_pulse[sort_index, :]
-        spect = Spectra[sort_index, ...]
-        spect_pb = (spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2) * 1e9
-        yield(spect_pb, {'magnitude': magnitude, 'phase': phase})
+    count = 0
+    while True:
 
+        if count % 1000 == 0:
+            seed_pick = np.sort(np.random.choice(spectra_index, seed_size, replace=False))
+            Time_pulse_seed = Time_pulse[seed_pick, :]
+            Nonlinearphase_pulse_seed = Nonlinearphase_pulse[seed_pick, :]
+            Spectra_seed = Spectra[seed_pick, ...]
+
+        num_spike = np.random.randint(low=1, high=5, size=batch_size)
+
+        magnitude_list = []
+        phase_list = []
+        spect_pb_list = []
+        for num in num_spike:
+            sort_index = np.sort(np.random.choice(seed_index, num, replace=False))
+            magnitude_list.append(mag_scale_factor * np.sum(Time_pulse_seed[sort_index, :], axis=0, keepdims=True))
+            phase_list.append(np.sum(Nonlinearphase_pulse_seed[sort_index, :], axis=0, keepdims=True))
+            spect = np.sum(Spectra_seed[sort_index, ...], axis=0, keepdims=True)
+            spect_pb_list.append((spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2) * 1e9)
+
+    count += 1
+    yield (np.concatenate(spect_pb_list, axis=0),
+           {'magnitude': np.concatenate(magnitude_list, axis=0), 'phase': np.concatenate(phase_list, axis=0)})
 
 
 # transfer_filename = '../../AttoStreakSimulations/Data/TF_workout_truth.hdf5'
@@ -69,7 +83,7 @@ test_data = data_generator(transfer=transfer_filename,
                            cut_top=1.0,
                            reps=200)
 
-#direct = './multilayer_cnn_truth'
+# direct = './multilayer_cnn_truth'
 
 direct = './multilayer_fc_truth'
 '''

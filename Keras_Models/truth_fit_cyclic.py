@@ -23,11 +23,10 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
     else:
         Spectra = h5_reformed['Spectra']
 
-    if 'Nonlinearphase_pulse' not in h5_reformed:
+    if 'Phase_pulse' not in h5_reformed:
         raise Exception('No "Phase_pulse" in file.')
     else:
-        Nonlinearphase_pulse = h5_reformed['Nonlinearphase_pulse']
-
+        Phase_pulse = h5_reformed['Phase_pulse']
 
     if 'Time_pulse' not in h5_reformed:
         raise Exception('No "Time_pulse" in file.')
@@ -36,50 +35,49 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
 
     random_shuffled_index = np.arange(0, Spectra.shape[0])[
                             int(Spectra.shape[0] * cut_bot):int(Spectra.shape[0] * cut_top)]
-    np.random.shuffle(random_shuffled_index)
+    #np.random.shuffle(random_shuffled_index)
     random_shuffled_index = np.tile(random_shuffled_index, reps=reps)
 
     print((int(Spectra.shape[0] * cut_bot), int(Spectra.shape[0] * cut_top)))
 
     for batch in np.arange(start=0, stop=random_shuffled_index.shape[0], step=batch_size):
         sort_index = np.sort(np.unique(random_shuffled_index[batch: batch + batch_size]))
+
         magnitude = mag_scale_factor * Time_pulse[sort_index, :]
-        phase = Nonlinearphase_pulse[sort_index, :]
+        phase = Phase_pulse[sort_index, :]
+        complex_waveform = magnitude * np.exp(1j * phase)
+        real_waveform = np.real(complex_waveform)
+        imaginary_waveform = np.imag(complex_waveform)
+
         spect = Spectra[sort_index, ...]
-        spect_pb = (spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2) * 1e9
-        yield(spect_pb, {'magnitude': magnitude, 'phase': phase})
+        spect_pb = (spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2)*1e9
+
+        yield (spect_pb,
+               {'real': real_waveform,
+                'imaginary': imaginary_waveform})
 
 
-
-# transfer_filename = '../../AttoStreakSimulations/Data/TF_workout_truth.hdf5'
-# transfer_filename = '../../AttoStreakSimulations/Data/TF_DokasHouse_truth.hdf5'
 transfer_filename = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
 
 train_data = data_generator(transfer=transfer_filename,
-                            batch_size=64,
+                            batch_size=1,
                             cut_bot=.0,
-                            cut_top=.80,
+                            cut_top=1.0,
                             reps=200)
 
-transfer_filename = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
-
 test_data = data_generator(transfer=transfer_filename,
-                           batch_size=64,
-                           cut_bot=.80,
+                           batch_size=1,
+                           cut_bot=.0,
                            cut_top=1.0,
                            reps=200)
 
-#direct = './multilayer_cnn_truth'
-
-direct = './multilayer_fc_truth'
-'''
+direct = './Cyclic_CNN_Truth'
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=direct,
-                                                      histogram_freq=1000,
+                                                      histogram_freq=100,
                                                       batch_size=1,
                                                       write_graph=True,
                                                       write_grads=False,
                                                       write_images=False)
-'''
 '''
 keras.callbacks.ModelCheckpoint(filepath,
                                 monitor='val_loss',
@@ -102,9 +100,9 @@ else:
 
 history = keras_model.fit_generator(train_data,
                                     steps_per_epoch=int(1e3),
-                                    epochs=3,
+                                    epochs=10,
                                     verbose=1,
-                                    # callbacks=[tensorboard_callback],
+                                    #callbacks=[tensorboard_callback],
                                     validation_data=test_data,
                                     validation_steps=int(1e1),
                                     class_weight=None,
