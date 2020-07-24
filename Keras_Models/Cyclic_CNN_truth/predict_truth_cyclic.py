@@ -7,7 +7,7 @@ import os
 
 # load data
 
-transfer = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
+transfer = 'D:/CookieBox/AttoStreakSimulations/Data/TF_another_set.hdf5'
 
 h5_reformed = h5py.File(transfer, 'r')
 
@@ -30,8 +30,8 @@ for key in list(h5_reformed.keys()):
     print('shape of {} is {}'.format(key, h5_reformed[key].shape))
 
 # load model
-direct = 'multilayer_cnn_truth'
-filename = direct + '/' + 'saved_model.h5'
+#direct = 'multilayer_cnn_truth'
+filename = 'saved_model.h5'
 try:
     keras_model
 except NameError:
@@ -80,7 +80,7 @@ for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], pr
     mse_error = np.sum(((mag_pred - mag_truth[ind]) ** 2 + (phase_pred - phase_truth[ind]) ** 2)) / 200.
     abs_diff = np.sum(np.abs(mag_pred - mag_truth[ind]) + np.abs(phase_pred - phase_truth[ind])) / np.sum(
         mag_truth[ind] + phase_truth[ind])
-    print('mse err0r = {}, abs error = {}'.format(mse_error, abs_diff))
+    print('mse error = {}, abs error = {}'.format(mse_error, abs_diff))
     # display(fig)
     # np.savetxt('{}hit_mag_truth{}.txt'.format(num_hits, ind), mag_truth[ind])
     # np.savetxt('{}hit_phase_truth{}.txt'.format(num_hits, ind), phase_truth[ind])

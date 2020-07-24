@@ -2,7 +2,7 @@ import importlib
 import h5py
 from timeit import default_timer as timer
 import time
-import DataHandlingMP as DH
+import Data_Conversion_Scripts.DataHandlingMP as DH
 
 importlib.reload(DH)
 

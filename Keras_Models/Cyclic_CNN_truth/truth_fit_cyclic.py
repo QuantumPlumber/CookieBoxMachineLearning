@@ -35,7 +35,7 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
 
     random_shuffled_index = np.arange(0, Spectra.shape[0])[
                             int(Spectra.shape[0] * cut_bot):int(Spectra.shape[0] * cut_top)]
-    #np.random.shuffle(random_shuffled_index)
+    # np.random.shuffle(random_shuffled_index)
     random_shuffled_index = np.tile(random_shuffled_index, reps=reps)
 
     print((int(Spectra.shape[0] * cut_bot), int(Spectra.shape[0] * cut_top)))
@@ -50,28 +50,27 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
         imaginary_waveform = np.imag(complex_waveform)
 
         spect = Spectra[sort_index, ...]
-        spect_pb = (spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2)*1e9
+        spect_pb = (spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2) * 1e9
 
-        yield (spect_pb,
-               {'real': real_waveform,
-                'imaginary': imaginary_waveform})
+        #yield (spect_pb, {'real': real_waveform, 'imaginary': imaginary_waveform})
+        yield (spect_pb, {'real': real_waveform})
 
 
-transfer_filename = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
+transfer_filename = 'D:/CookieBox/AttoStreakSimulations/Data/TF_another_set.hdf5'
 
 train_data = data_generator(transfer=transfer_filename,
-                            batch_size=1,
+                            batch_size=32,
                             cut_bot=.0,
-                            cut_top=1.0,
+                            cut_top=.80,
                             reps=200)
 
 test_data = data_generator(transfer=transfer_filename,
-                           batch_size=1,
-                           cut_bot=.0,
+                           batch_size=32,
+                           cut_bot=.8,
                            cut_top=1.0,
                            reps=200)
 
-direct = './Cyclic_CNN_Truth'
+direct = ''
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=direct,
                                                       histogram_freq=100,
                                                       batch_size=1,
@@ -88,7 +87,7 @@ keras.callbacks.ModelCheckpoint(filepath,
                                 period=1)
 '''
 
-filename = direct + '/' + 'saved_model.h5'
+filename = 'saved_model.h5'
 try:
     keras_model
 except NameError:
@@ -100,9 +99,9 @@ else:
 
 history = keras_model.fit_generator(train_data,
                                     steps_per_epoch=int(1e3),
-                                    epochs=10,
+                                    epochs=2,
                                     verbose=1,
-                                    #callbacks=[tensorboard_callback],
+                                    # callbacks=[tensorboard_callback],
                                     validation_data=test_data,
                                     validation_steps=int(1e1),
                                     class_weight=None,
@@ -118,4 +117,4 @@ for i, key in enumerate(history.history):
     axs[i].plot(history.history[key])
     axs[i].set_title(key)
 
-fig.savefig(direct + '/' + '/history.png', dpi=700)
+fig.savefig('training_history.png', dpi=700)

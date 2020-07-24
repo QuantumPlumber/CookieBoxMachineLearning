@@ -3,8 +3,6 @@ This file contains functions to:
 import data
 create TF datasets
 
-live large
-
 '''
 
 import tensorflow as tf
