@@ -52,7 +52,7 @@ net_linear = tf.keras.layers.Dense(units=redux, activation=None)(net)
 net_nonlinear = tf.keras.layers.Dense(units=redux, activation='tanh')(net)
 net = tf.keras.layers.Multiply()([net_linear, net_nonlinear])
 
-dense_network = [300, 100, 100]
+dense_network = [333, 333, 333]
 for nodes in dense_network:
     net_linear = tf.keras.layers.Dense(units=nodes, activation=None)(net)
     net_nonlinear = tf.keras.layers.Dense(units=nodes, activation='tanh')(net)
@@ -76,7 +76,8 @@ keras_model.compile(optimizer=RMSprop,
                     loss_weights=[1., 1.])
 
 # direct = './multilayer_cnn_2'
-direct = './multilayer_cnn_truth'
+#direct = './multilayer_cnn_truth'
+direct = '.'
 filename = direct + '/' + 'model.png'
 plot_model(keras_model, to_file=filename, show_shapes=True)
 

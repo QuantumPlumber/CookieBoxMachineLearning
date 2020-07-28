@@ -13,7 +13,8 @@ phase_scale_factor = 1
 # transfer = '../../AttoStreakSimulations/Data/TF_workout_truth.hdf5'
 # transfer = '../../AttoStreakSimulations/Data/TF_DokasHouse_truth.hdf5'
 # transfer = '../../AttoStreakSimulations/Data/TF_SinglePulse_truth.hdf5'
-transfer = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
+# transfer = '../../AttoStreakSimulations/Data/TF_another_set.hdf5'
+transfer = 'D:/CookieBox/AttoStreakSimulations/Data/TF_another_set.hdf5'
 
 h5_reformed = h5py.File(transfer, 'r')
 
@@ -84,7 +85,6 @@ grid = np.indices(dimensions=(int(mag_truth.shape[0] / 3), 3))
 row = grid[0].flatten()
 col = grid[1].flatten() * 2
 index = np.arange(mag_truth.shape[0])
-num_hits = 400
 for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], predictions[1]):
     # for ind, ro, co, phase_pred in zip(index, row, col, predictions):
     ax[ro, co].plot(mag_truth[ind], 'b', mag_pred, 'r')
@@ -99,7 +99,7 @@ for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], pr
     # np.savetxt('{}hit_mag_pred{}.txt'.format(num_hits, ind), mag_pred)
     # np.savetxt('{}hit_phase_pred{}.txt'.format(num_hits, ind), phase_pred)
 
-    # fig.savefig('Images/sampleWaveforms4.png', dpi= 700)
+fig.savefig('sampleWaveforms2.png', dpi=700)
 
 '''
 fig, ax = plt.subplots(nrows=int(mag_truth.shape[0] / 3), ncols=int(2 * 3),

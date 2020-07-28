@@ -37,7 +37,7 @@ for key in list(h5_reformed.keys()):
     print('shape of {} is {}'.format(key, h5_reformed[key].shape))
 
 # load model
-direct = 'multilayer_cnn_truth'
+#direct = 'multilayer_fc_truth'
 direct = '.'
 filename = direct + '/' + 'saved_model.h5'
 try:

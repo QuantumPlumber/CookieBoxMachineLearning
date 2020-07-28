@@ -23,6 +23,13 @@ if 'Spectra' not in h5_reformed:
 else:
     Spectra = h5_reformed['Spectra']
 
+print(Spectra.shape)
+
+if 'Phase_pulse' not in h5_reformed:
+    raise Exception('No "Phase_pulse" in file.')
+else:
+    Phase_pulse = h5_reformed['Phase_pulse']
+
 if 'Nonlinearphase_pulse' not in h5_reformed:
     raise Exception('No "Phase_pulse" in file.')
 else:
@@ -37,7 +44,8 @@ for key in list(h5_reformed.keys()):
     print('shape of {} is {}'.format(key, h5_reformed[key].shape))
 
 # load model
-direct = 'multilayer_cnn_truth'
+# direct = 'multilayer_fc_truth'
+# direct = 'multi_pulse_train'
 direct = '.'
 filename = direct + '/' + 'saved_model.h5'
 try:
@@ -52,22 +60,28 @@ except NameError:
 else:
     print('keras_model already instantiated')
 
-cut_bot = int(Time_pulse.shape[0] * 0.8)
-cut_top = int(Time_pulse.shape[0] * 1.0)
+cut_bot = 0.8
+cut_top = 1.0
 num_spectra = 30
+np.random.seed()
 
-cut = np.unique(np.random.random_integers(low=cut_bot, high=cut_top, size=num_spectra))
-print(cut)
-spectra_true = Spectra[cut, ...]
-spectra = spectra_true[:, :, :, 0] ** 2 + spectra_true[:, :, :, 1] ** 2
-true_sum = np.sum(spectra)
-spectra = spectra*1e9
-mag_truth = Time_pulse[cut, ...] * mag_scale_factor
-phase_truth = Nonlinearphase_pulse[cut, ...]
+spectra_index = np.arange(0, Spectra.shape[0])[int(Spectra.shape[0] * cut_bot):int(Spectra.shape[0] * cut_top)]
 
+num_spike = np.random.randint(low=1, high=5, size=num_spectra)
 
-# ground_truther[:, 1, 1:] -= ground_truther[:, 1, :-1]
-# phase_truth = ground_truther*mag_truth
+magnitude_list = []
+phase_list = []
+spect_pb_list = []
+for num in num_spike:
+    sort_index = np.sort(np.random.choice(spectra_index, num, replace=False))
+    magnitude_list.append(mag_scale_factor * np.sum(Time_pulse[sort_index, :], axis=0, keepdims=True))
+    phase_list.append(np.sum(Nonlinearphase_pulse[sort_index, :], axis=0, keepdims=True))
+    spect = np.sum(Spectra[sort_index, ...], axis=0, keepdims=True)
+    spect_pb_list.append((spect[:, :, :, 0] ** 2 + spect[:, :, :, 1] ** 2) * 1e9)
+
+spectra = np.concatenate(spect_pb_list, axis=0)
+mag_truth = np.concatenate(magnitude_list, axis=0)
+phase_truth = np.concatenate(phase_list, axis=0)
 
 h5_reformed.close()
 
@@ -79,9 +93,8 @@ grid = np.indices(dimensions=(int(mag_truth.shape[0] / 3), 3))
 row = grid[0].flatten()
 col = grid[1].flatten() * 2
 index = np.arange(mag_truth.shape[0])
-num_hits = 400
 for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], predictions[1]):
-#for ind, ro, co, phase_pred in zip(index, row, col, predictions):
+    # for ind, ro, co, phase_pred in zip(index, row, col, predictions):
     ax[ro, co].plot(mag_truth[ind], 'b', mag_pred, 'r')
     ax[ro, co + 1].plot(phase_truth[ind], 'b', phase_pred, 'r')
     mse_error = np.sum(((mag_pred - mag_truth[ind]) ** 2 + (phase_pred - phase_truth[ind]) ** 2)) / 200.
@@ -94,18 +107,5 @@ for ind, ro, co, mag_pred, phase_pred in zip(index, row, col, predictions[0], pr
     # np.savetxt('{}hit_mag_pred{}.txt'.format(num_hits, ind), mag_pred)
     # np.savetxt('{}hit_phase_pred{}.txt'.format(num_hits, ind), phase_pred)
 
-    # fig.savefig('Images/sampleWaveforms4.png', dpi= 700)
+fig.savefig('sampleWaveforms2.png', dpi=700)
 
-'''
-fig, ax = plt.subplots(nrows=int(mag_truth.shape[0] / 3), ncols=int(2 * 3),
-                       figsize=(22, int(mag_truth.shape[0] / 3) * 3))
-grid = np.indices(dimensions=(int(mag_truth.shape[0] / 3), 3))
-row = grid[0].flatten()
-col = grid[1].flatten() * 2
-index = np.arange(mag_truth.shape[0])
-num_hits = 400
-for ro, co, spect in zip(row, col, spectra_true):
-    for spec in spect:
-        ax[ro, co].plot((spec[:, 0]**2 + spec[:, 1]**2)/true_sum, 'b')
-        ax[ro, co + 1].plot(spec[:, 1], 'r')
-'''

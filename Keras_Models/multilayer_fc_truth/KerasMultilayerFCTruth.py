@@ -63,7 +63,8 @@ keras_model.compile(optimizer=RMSprop,
 
 
 # direct = './multilayer_cnn_2'
-direct = './multilayer_fc_truth'
+# direct = './multilayer_fc_truth'
+direct = '.'
 filename = direct + '/' + 'model.png'
 plot_model(keras_model, to_file=filename, show_shapes=True)
 

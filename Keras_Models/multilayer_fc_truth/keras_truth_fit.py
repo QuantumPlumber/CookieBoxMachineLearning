@@ -15,6 +15,8 @@ def data_generator(transfer='TF_train_wave_unwrapped_eggs.hdf5', batch_size=64, 
         :param filename:
         :return:
         '''
+    np.random.seed()
+
 
     h5_reformed = h5py.File(transfer, 'r')
 
